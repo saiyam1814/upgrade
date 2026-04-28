@@ -1,0 +1,7 @@
+# Disable Jekyll — we ship a plain static HTML page.
+# This file's presence prevents GitHub Pages from running Jekyll
+# transformations on the /docs folder.
+theme: null
+plugins: []
+exclude:
+  - "*.md"

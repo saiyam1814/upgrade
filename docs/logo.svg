@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#06b6d4"/>
+      <stop offset="1" stop-color="#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="h" x1="0" y1="0" x2="0" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#0891b2"/>
+    </linearGradient>
+  </defs>
+  <!-- hexagon, evoking the K8s wheel + safety ring -->
+  <path d="M100 8 L180 50 L180 150 L100 192 L20 150 L20 50 Z"
+        stroke="url(#g)" stroke-width="6" fill="none" stroke-linejoin="round"/>
+  <!-- inner upward arrow -->
+  <path d="M100 50 L150 120 L120 120 L120 160 L80 160 L80 120 L50 120 Z"
+        fill="url(#h)" stroke="url(#g)" stroke-width="3" stroke-linejoin="round"/>
+  <!-- three small dots: pre-flight, run, verify -->
+  <circle cx="60" cy="35" r="5" fill="#22d3ee"/>
+  <circle cx="100" cy="22" r="5" fill="#06b6d4"/>
+  <circle cx="140" cy="35" r="5" fill="#0891b2"/>
+</svg>

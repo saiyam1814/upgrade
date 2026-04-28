@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>kubectl-upgrade — the conductor for any Kubernetes upgrade</title>
+<meta name="description" content="Pre-flight, run, watch, unstick, verify any Kubernetes upgrade safely. Provider-agnostic. vCluster fleet aware. Read-only by default.">
+<meta property="og:title" content="kubectl-upgrade">
+<meta property="og:description" content="The conductor for any Kubernetes upgrade — managed, self-managed, vCluster fleet.">
+<meta property="og:image" content="https://saiyam1814.github.io/upgrade/logo.svg">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<style>
+:root {
+  --bg: #0b1020;
+  --bg2: #11172e;
+  --fg: #e6edf7;
+  --muted: #8b9bb5;
+  --accent: #22d3ee;
+  --accent2: #3b82f6;
+  --warn: #fbbf24;
+  --err: #ef4444;
+  --ok: #34d399;
+  --border: #1f2a44;
+  --code-bg: #0f1530;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: radial-gradient(circle at 20% 0%, #1a2350 0%, var(--bg) 50%);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+.container { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
+header { padding: 1.5rem 0; }
+nav { display: flex; align-items: center; justify-content: space-between; }
+nav .brand { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; font-size: 1.1rem; }
+nav .brand img { width: 28px; height: 28px; }
+nav ul { display: flex; gap: 1.5rem; list-style: none; padding: 0; margin: 0; }
+nav a { color: var(--muted); text-decoration: none; font-size: 0.95rem; }
+nav a:hover { color: var(--fg); }
+
+.hero { text-align: center; padding: 4rem 0 3rem; }
+.hero img.logo { width: 110px; height: 110px; margin-bottom: 1rem; }
+.hero h1 {
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  margin: 0.5rem 0 1rem;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  letter-spacing: -0.02em;
+  font-weight: 800;
+}
+.hero p.tag {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  color: var(--muted);
+  max-width: 720px;
+  margin: 0 auto 2rem;
+}
+.cta { display: inline-flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.7rem 1.4rem;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: 1px solid transparent;
+  transition: transform 0.1s, border-color 0.1s, background 0.1s;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn.primary {
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  color: #0a0e1f;
+}
+.btn.ghost { background: var(--bg2); color: var(--fg); border-color: var(--border); }
+
+section { padding: 3rem 0; }
+section h2 {
+  font-size: 1.6rem;
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.01em;
+}
+section p.lead { color: var(--muted); max-width: 720px; margin-top: 0; }
+
+.grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin-top: 2rem; }
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+  border-radius: 14px;
+}
+.card h3 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+.card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+.card .icon { font-size: 1.5rem; margin-bottom: 0.6rem; display: block; }
+
+pre, code { font-family: "JetBrains Mono", "SF Mono", Consolas, monospace; }
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  padding: 1rem 1.25rem;
+  border-radius: 10px;
+  overflow-x: auto;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+code { background: var(--code-bg); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.88em; }
+pre code { background: transparent; padding: 0; }
+
+.flow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+.flow .step {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 0.75rem;
+  text-align: center;
+  position: relative;
+}
+.flow .step .num {
+  display: inline-block;
+  width: 28px; height: 28px; line-height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  color: #0a0e1f;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+.flow .step h4 { margin: 0; font-size: 0.95rem; }
+.flow .step p { margin: 0.3rem 0 0; color: var(--muted); font-size: 0.8rem; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.92rem;
+}
+table th, table td {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+table th { color: var(--muted); font-weight: 600; }
+
+.tabs { display: flex; gap: 0.5rem; margin: 1rem 0 0.5rem; flex-wrap: wrap; }
+.tab {
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.tab.active { color: var(--fg); border-color: var(--accent); }
+.panel { display: none; }
+.panel.active { display: block; }
+
+footer {
+  text-align: center;
+  padding: 3rem 0 2rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  border-top: 1px solid var(--border);
+  margin-top: 4rem;
+}
+footer a { color: var(--accent); text-decoration: none; }
+.dim { color: var(--muted); }
+
+.term {
+  background: #050811;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre;
+}
+.term .red { color: #ef4444; }
+.term .yel { color: #fbbf24; }
+.term .grn { color: #34d399; }
+.term .cyn { color: #22d3ee; }
+.term .gry { color: #6b7c93; }
+.term .mag { color: #c084fc; }
+</style>
+</head>
+<body>
+<header>
+  <div class="container">
+    <nav>
+      <div class="brand"><img src="logo.svg" alt="logo"> kubectl-upgrade</div>
+      <ul>
+        <li><a href="#why">Why</a></li>
+        <li><a href="#flow">Flow</a></li>
+        <li><a href="#install">Install</a></li>
+        <li><a href="#commands">Commands</a></li>
+        <li><a href="https://github.com/saiyam1814/upgrade">GitHub</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<section class="hero container">
+  <img class="logo" src="logo.svg" alt="kubectl-upgrade logo">
+  <h1>The conductor for any<br>Kubernetes upgrade</h1>
+  <p class="tag">
+    Pre-flight what will break · emit the cloud-CLI command · watch · unstick stuck states · verify after.
+    Provider-agnostic. vCluster fleet aware. Read-only by default.
+  </p>
+  <div class="cta">
+    <a class="btn primary" href="#install">Install</a>
+    <a class="btn ghost" href="https://github.com/saiyam1814/upgrade">View on GitHub →</a>
+  </div>
+</section>
+
+<section id="why" class="container">
+  <h2>Why another upgrade tool</h2>
+  <p class="lead">
+    Every existing tool — pluto, kubent, every cloud's upgrade insights — checks <em>only what's in etcd plus a recent audit log</em>.
+    None inspect the workload supply chain (Git, Helm, ArgoCD/Flux, third-party CRDs, admission webhooks, addon controllers, PV/PVCs).
+    And once the upgrade starts, you are on your own.
+  </p>
+  <div class="grid">
+    <div class="card">
+      <span class="icon">🛡️</span>
+      <h3>Read-only by default</h3>
+      <p>Every command is safe to run in production. Mutating actions require <code>--execute</code> + per-action <code>[y/N]</code>.</p>
+    </div>
+    <div class="card">
+      <span class="icon">🧭</span>
+      <h3>Conductor, not orchestra</h3>
+      <p>Never runs cloud CLIs for you. Emits the exact <code>aws eks</code> / <code>gcloud</code> / <code>az</code> command — you run it.</p>
+    </div>
+    <div class="card">
+      <span class="icon">🔁</span>
+      <h3>Watch + unstick</h3>
+      <p>Detects stuck PDBs, stalled CRD migrations, addon dep cycles, NotReady nodes — emits the unstick command.</p>
+    </div>
+    <div class="card">
+      <span class="icon">💾</span>
+      <h3>PV/PVC aware</h3>
+      <p>Catches in-tree → CSI migration risks, single-replica StatefulSets, RWX volumes on cloud classes mid-removal.</p>
+    </div>
+    <div class="card">
+      <span class="icon">🌐</span>
+      <h3>vCluster fleet</h3>
+      <p>When the host bumps, every Tenant Cluster gets per-tenant pre-flight + ordered upgrade wave.</p>
+    </div>
+    <div class="card">
+      <span class="icon">⚡</span>
+      <h3>Single static binary</h3>
+      <p>One Go binary. krew · brew · curl · go install. No daemons, no telemetry, no network egress.</p>
+    </div>
+  </div>
+</section>
+
+<section id="flow" class="container">
+  <h2>The day-1 production flow</h2>
+  <p class="lead">Run pre-flight → get the runbook → run the cloud command yourself → watch → verify.</p>
+  <div class="flow">
+    <div class="step"><span class="num">1</span><h4>preflight</h4><p>scan + sim + addons + pdb + volumes + vcluster</p></div>
+    <div class="step"><span class="num">2</span><h4>run plan</h4><p>emit aws/gcloud/az command</p></div>
+    <div class="step"><span class="num">3</span><h4>backup</h4><p>velero / etcd / vcluster snapshot</p></div>
+    <div class="step"><span class="num">4</span><h4>you run</h4><p>the emitted cloud-CLI command</p></div>
+    <div class="step"><span class="num">5</span><h4>run watch</h4><p>stuck-state monitor</p></div>
+    <div class="step"><span class="num">6</span><h4>run verify</h4><p>server version + rescan</p></div>
+    <div class="step"><span class="num">7</span><h4>fleet</h4><p>vCluster Tenant Cluster wave</p></div>
+  </div>
+
+<h2 style="margin-top:3rem">What it actually looks like</h2>
+<div class="term"><span class="cyn">▎ Preflight</span>
+<span class="gry">  v1.30.4 → v1.34</span>
+
+<span class="grn">✓</span> scan: 21 objects walked
+<span class="grn">✓</span> simulate: forward changes added
+<span class="grn">✓</span> addons: compat checked
+<span class="grn">✓</span> pdb: drain feasibility checked
+<span class="grn">✓</span> volumes: PV/PVC/CSI checked
+<span class="grn">✓</span> vcluster: Tenant-Cluster gates checked
+
+<span class="gry">────────────────────────────────────────────────────</span>
+=== kubectl-upgrade — source: live (preflight) v1.30.4 → target v1.34 ===
+
+Summary: 1 BLOCKER · 1 HIGH · 8 MEDIUM · 0 LOW · 0 INFO
+
+BLOCKERS
+  <span class="red">✗</span> PDB e2e/redis-pdb-broken ALLOWED DISRUPTIONS == 0 (will deadlock drain)
+      OBJECT:  policy/v1 PodDisruptionBudget e2e/redis-pdb-broken
+      INFO:    currentHealthy=1 desiredHealthy=1 expectedPods=1
+      FIX:     Increase replicas (≥ desiredHealthy + 1), OR loosen the PDB
+
+HIGH
+  <span class="yel">⚠</span> [v1.31] cgroup v1 support deprecated in kubelet
+      FIX:     Migrate node OS images to cgroup v2
+
+MEDIUM
+  <span class="cyn">•</span> Deployment e2e/redis mounts a PVC — wrong primitive for stateful workload
+  <span class="cyn">•</span> StatefulSet e2e/postgres has replicas=1 with persistent storage
+  <span class="cyn">•</span> No VolumeSnapshotClass installed — pre-upgrade snapshots not available</div>
+</section>
+
+<section id="install" class="container">
+  <h2>Install</h2>
+  <p class="lead">Pick whichever fits. All paths give you the same single static binary.</p>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="krew">krew</button>
+    <button class="tab" data-tab="brew">Homebrew</button>
+    <button class="tab" data-tab="curl">curl</button>
+    <button class="tab" data-tab="go">go install</button>
+  </div>
+  <div class="panel active" id="krew"><pre><code>kubectl krew install upgrade
+kubectl upgrade --help</code></pre></div>
+  <div class="panel" id="brew"><pre><code>brew install saiyam1814/tap/kubectl-upgrade
+kubectl upgrade --help</code></pre></div>
+  <div class="panel" id="curl"><pre><code>curl -sSL https://raw.githubusercontent.com/saiyam1814/upgrade/main/install.sh | sh
+kubectl-upgrade --help</code></pre></div>
+  <div class="panel" id="go"><pre><code>go install github.com/saiyam1814/upgrade@latest
+# binary lands as $(go env GOBIN)/upgrade — rename to kubectl-upgrade for kubectl plugin invocation</code></pre></div>
+</section>
+
+<section id="commands" class="container">
+  <h2>Commands</h2>
+  <p class="lead">Three top-level flows plus a toolkit. Run <code>kubectl upgrade &lt;cmd&gt; --help</code> for examples.</p>
+  <table>
+    <tr><th>Command</th><th>Purpose</th></tr>
+    <tr><td><code>preflight</code></td><td>scan + simulate + addons + pdb + volumes + vcluster</td></tr>
+    <tr><td><code>run plan</code></td><td>Emit cloud-CLI commands for control plane + nodes</td></tr>
+    <tr><td><code>run watch</code></td><td>Monitor in-flight upgrade for stuck states</td></tr>
+    <tr><td><code>run verify</code></td><td>Post-upgrade verification</td></tr>
+    <tr><td><code>fleet</code></td><td>vCluster Tenant Cluster wave orchestration</td></tr>
+    <tr><td><code>scan</code></td><td>Deprecated APIs (manifests + Helm + live)</td></tr>
+    <tr><td><code>simulate</code></td><td>Forward sim: feature gates, defaults, kubelet, kernel</td></tr>
+    <tr><td><code>pdb</code></td><td>Drain-deadlock detector</td></tr>
+    <tr><td><code>addons</code></td><td>cert-manager / Istio / Karpenter / ArgoCD / Flux compat</td></tr>
+    <tr><td><code>volumes</code></td><td>PV / PVC / CSI / StorageClass safety</td></tr>
+    <tr><td><code>vcluster</code></td><td>Per-Tenant-Cluster decision tree</td></tr>
+    <tr><td><code>unstick</code></td><td>Stuck-state recovery toolkit</td></tr>
+    <tr><td><code>plan</code></td><td>Chained one-minor-at-a-time path</td></tr>
+    <tr><td><code>report</code></td><td>Combined report (human / JSON / Markdown / SARIF)</td></tr>
+    <tr><td><code>tui</code></td><td>Interactive visual upgrade dashboard</td></tr>
+  </table>
+</section>
+
+<section id="providers" class="container">
+  <h2>Providers it speaks for</h2>
+  <p class="lead">It never runs the command. It tells you exactly what to type.</p>
+  <table>
+    <tr><th>Provider</th><th>Control plane</th><th>Node pools</th></tr>
+    <tr><td>AWS EKS / EKS Auto</td><td><code>aws eks update-cluster-version</code></td><td><code>aws eks update-nodegroup-version</code></td></tr>
+    <tr><td>GKE / GKE Autopilot</td><td><code>gcloud container clusters upgrade</code></td><td><code>gcloud container clusters upgrade --node-pool</code></td></tr>
+    <tr><td>AKS</td><td><code>az aks upgrade</code></td><td><code>az aks nodepool upgrade</code></td></tr>
+    <tr><td>OpenShift / ROSA</td><td><code>oc adm upgrade</code></td><td>auto via Machine Config Operator</td></tr>
+    <tr><td>RKE2 / k3s</td><td>system-upgrade-controller Plan</td><td>system-upgrade-controller Plan</td></tr>
+    <tr><td>Talos</td><td><code>talosctl upgrade-k8s</code></td><td>separate <code>talosctl upgrade</code></td></tr>
+    <tr><td>kubeadm self-managed</td><td><code>kubeadm upgrade plan + apply</code></td><td>drain + apt + restart kubelet</td></tr>
+    <tr><td>vCluster</td><td><code>helm upgrade</code> / <code>vcluster upgrade</code></td><td>n/a</td></tr>
+  </table>
+</section>
+
+<footer>
+  <div class="container">
+    <p>Apache 2.0 · Built by <a href="https://github.com/saiyam1814">Saiyam Pathak</a> · <a href="https://github.com/saiyam1814/upgrade">GitHub</a> · <a href="https://github.com/saiyam1814/upgrade/blob/main/SAFETY.md">Safety Contract</a></p>
+    <p class="dim">Not affiliated with the Kubernetes project. The bundled deprecation rule data is sourced from <a href="https://github.com/FairwindsOps/pluto">FairwindsOps/pluto</a> (Apache 2.0).</p>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('.tab').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById(b.dataset.tab).classList.add('active');
+  });
+});
+</script>
+</body>
+</html>
