@@ -50,6 +50,7 @@ type Cluster struct {
 	NodeCount    int
 	NodePoolHint string // e.g. EKS managed nodegroup name, GKE node pool, ...
 	Region       string // best-effort
+	Zone         string // single zone if cluster is zonal; empty for regional
 	Notes        []string
 }
 
@@ -91,6 +92,7 @@ func Detect(ctx context.Context, core kubernetes.Interface) (*Cluster, error) {
 		c.NodeCount = len(nodes.Items)
 		c.NodePoolHint = poolHint(c.Provider, nodes.Items)
 		c.Region = regionHint(nodes.Items)
+		c.Zone = zoneHint(nodes.Items)
 	}
 
 	// vCluster check — the apiserver might *be* a vCluster.
@@ -150,6 +152,26 @@ func regionHint(nodes []corev1.Node) string {
 	return ""
 }
 
+// zoneHint returns the single zone all nodes share — i.e. the cluster
+// is zonal. Returns empty string for regional / multi-zone clusters.
+func zoneHint(nodes []corev1.Node) string {
+	zone := ""
+	for _, n := range nodes {
+		v, ok := n.Labels["topology.kubernetes.io/zone"]
+		if !ok || v == "" {
+			continue
+		}
+		if zone == "" {
+			zone = v
+			continue
+		}
+		if v != zone {
+			return "" // mixed zones → regional/multi-zone
+		}
+	}
+	return zone
+}
+
 func isVClusterAPIServer(ctx context.Context, core kubernetes.Interface) bool {
 	// vCluster sets a "vcluster.loft.sh/managed" label on its own
 	// kube-system or has the loft owner annotation. Cheap probe.
@@ -202,18 +224,25 @@ func (c *Cluster) Plan(target string) UpgradeCommands {
 			},
 		}
 	case ProviderGKE, ProviderGKEAutopilot:
+		// GKE has both zonal and regional clusters with different gcloud
+		// flags. Zonal uses --zone us-central1-a; regional uses
+		// --region us-central1. Detect via shared-zone heuristic.
+		locFlag := "--region " + region
+		if c.Zone != "" {
+			locFlag = "--zone " + c.Zone
+		}
 		return UpgradeCommands{
 			Provider: c.Provider,
 			PreReqs: []string{
 				"gcloud auth list",
-				"gcloud container clusters describe " + cluster + " --region " + region + " --format='value(currentMasterVersion)'",
+				"gcloud container clusters describe " + cluster + " " + locFlag + " --format='value(currentMasterVersion)'",
 			},
 			ControlPlane: []string{
-				"gcloud container clusters upgrade " + cluster + " --master --cluster-version=" + bareVersion(target) + " --region=" + region,
+				"gcloud container clusters upgrade " + cluster + " --master --cluster-version=" + bareVersion(target) + " " + locFlag,
 			},
 			NodePools: []string{
 				"# For each node pool:",
-				"gcloud container clusters upgrade " + cluster + " --node-pool=" + pool + " --cluster-version=" + bareVersion(target) + " --region=" + region,
+				"gcloud container clusters upgrade " + cluster + " --node-pool=" + pool + " --cluster-version=" + bareVersion(target) + " " + locFlag,
 			},
 			Notes: []string{
 				"GKE Autopilot ignores --node-pool — node version follows the control plane automatically.",

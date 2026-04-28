@@ -268,14 +268,13 @@ footer a { color: var(--accent); text-decoration: none; }
   <h2>The day-1 production flow</h2>
   <p class="lead">Run pre-flight → get the runbook → run the cloud command yourself → watch → verify.</p>
   <div class="flow">
-    <div class="step"><span class="num">1</span><h4>preflight</h4><p>scan + sim + addons + pdb + volumes + vcluster</p></div>
-    <div class="step"><span class="num">2</span><h4>run plan</h4><p>emit aws/gcloud/az command</p></div>
-    <div class="step"><span class="num">3</span><h4>backup</h4><p>velero / etcd / vcluster snapshot</p></div>
-    <div class="step"><span class="num">4</span><h4>you run</h4><p>the emitted cloud-CLI command</p></div>
-    <div class="step"><span class="num">5</span><h4>run watch</h4><p>stuck-state monitor</p></div>
-    <div class="step"><span class="num">6</span><h4>run verify</h4><p>server version + rescan</p></div>
-    <div class="step"><span class="num">7</span><h4>fleet</h4><p>vCluster Tenant Cluster wave</p></div>
+    <div class="step"><span class="num">1</span><h4>preflight</h4><p>find what'll break</p></div>
+    <div class="step"><span class="num">2</span><h4>run plan</h4><p>get the runbook (with backup reminder)</p></div>
+    <div class="step"><span class="num">3</span><h4>you run</h4><p>the emitted cloud-CLI command yourself</p></div>
+    <div class="step"><span class="num">4</span><h4>run watch</h4><p>stuck-state monitor</p></div>
+    <div class="step"><span class="num">5</span><h4>run verify</h4><p>server version + rescan</p></div>
   </div>
+  <p class="dim" style="margin-top:1rem;font-size:0.9rem">Optional: <code>kubectl upgrade fleet --plan</code> for vCluster Tenant Cluster waves after a Control Plane Cluster bump.</p>
 
 <h2 style="margin-top:3rem">What it actually looks like</h2>
 <div class="term"><span class="cyn">▎ Preflight</span>
