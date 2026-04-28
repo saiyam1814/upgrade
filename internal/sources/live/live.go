@@ -260,6 +260,11 @@ func apiVersionFor(gvr schema.GroupVersionResource) string {
 // API the apiserver may no longer serve. Helm v3 release secrets are
 // type "helm.sh/release.v1" with an "owner=helm" label and a "release"
 // data key holding base64(gzip(json(release))).
+//
+// Helm stores one Secret PER REVISION (`...v1`, `...v2`, ...). We
+// collapse to one row per (namespace, release-name), keeping the
+// highest revision — otherwise a release that's been upgraded shows
+// every old manifest twice.
 func (c *Client) HelmReleases(ctx context.Context) ([]manifests.Object, []error) {
 	var (
 		out  []manifests.Object
@@ -271,10 +276,31 @@ func (c *Client) HelmReleases(ctx context.Context) ([]manifests.Object, []error)
 	if err != nil {
 		return nil, []error{fmt.Errorf("list helm secrets: %w", err)}
 	}
+
+	// Bucket by (namespace, release-name) → highest-revision secret.
+	type bucketKey struct{ ns, rel string }
+	type latest struct {
+		secret corev1.Secret
+		rev    int
+	}
+	buckets := map[bucketKey]latest{}
 	for _, s := range secrets.Items {
 		if !isHelmReleaseSecret(s) {
 			continue
 		}
+		relName := s.Labels["name"]
+		if relName == "" {
+			continue
+		}
+		rev, _ := strconv.Atoi(s.Labels["version"])
+		k := bucketKey{s.Namespace, relName}
+		if cur, ok := buckets[k]; !ok || rev > cur.rev {
+			buckets[k] = latest{secret: s, rev: rev}
+		}
+	}
+
+	for _, b := range buckets {
+		s := b.secret
 		release, err := decodeHelmRelease(s.Data["release"])
 		if err != nil {
 			errs = append(errs, fmt.Errorf("%s/%s decode: %w", s.Namespace, s.Name, err))

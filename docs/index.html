@@ -254,7 +254,7 @@ footer a { color: var(--accent); text-decoration: none; }
     <div class="card">
       <span class="icon">🌐</span>
       <h3>vCluster fleet</h3>
-      <p>When the host bumps, every Tenant Cluster gets per-tenant pre-flight + ordered upgrade wave.</p>
+      <p>Bumping the host? <code>fleet --host-target v1.34</code> checks every tenant's vCluster version against a host-K8s compat matrix and tells you which tenants must bump first.</p>
     </div>
     <div class="card">
       <span class="icon">⚡</span>
@@ -349,6 +349,23 @@ kubectl-upgrade --help</code></pre></div>
     <tr><td><code>report</code></td><td>Combined report (human / JSON / Markdown / SARIF)</td></tr>
     <tr><td><code>tui</code></td><td>Interactive visual upgrade dashboard</td></tr>
   </table>
+</section>
+
+<section id="fleet" class="container">
+  <h2>Fleet — host × vCluster compat</h2>
+  <p class="lead">When you bump a Control Plane Cluster's K8s version, not every vCluster on it tolerates the new host. <code>fleet</code> checks every tenant against a curated compat matrix and tells you which tenants must bump first.</p>
+  <pre><code>$ kubectl upgrade fleet --host-target v1.34 --plan</code></pre>
+  <table>
+    <tr><th>vCluster band</th><th>Supported host K8s window</th></tr>
+    <tr><td><code>v0.20 – v0.21</code></td><td>1.26 … 1.30</td></tr>
+    <tr><td><code>v0.22 – v0.23</code></td><td>1.27 … 1.31</td></tr>
+    <tr><td><code>v0.24</code></td><td>1.28 … 1.32</td></tr>
+    <tr><td><code>v0.25 – v0.27</code></td><td>1.29 … 1.33</td></tr>
+    <tr><td><code>v0.28 – v0.30</code></td><td>1.29 … 1.34</td></tr>
+    <tr><td><code>v0.31 – v0.33</code></td><td>1.30 … 1.35</td></tr>
+    <tr><td><code>v0.34+</code></td><td>1.31 … 1.36</td></tr>
+  </table>
+  <p class="dim" style="margin-top:1rem;font-size:0.9rem">Per tenant: ✗ BLOCKER if outside the window (run-book emits the minimum vCluster version to bump to first), ⚠ MEDIUM at the upper edge, ✓ INFO if safe. Hand-curated; PRs welcome to extend.</p>
 </section>
 
 <section id="providers" class="container">

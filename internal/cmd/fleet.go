@@ -93,8 +93,17 @@ func runFleet(ctx context.Context, o *fleetOpts) error {
 		}
 		vcTarget = &t
 	}
+	var hostTarget *apis.Semver
+	if o.hostTarget != "" {
+		t, ok := apis.Parse(o.hostTarget)
+		if !ok {
+			return fmt.Errorf("invalid --host-target %q", o.hostTarget)
+		}
+		hostTarget = &t
+	}
 
-	// Per-tenant evaluation.
+	// Per-tenant evaluation: combine vCluster product gates (--vcluster-target)
+	// AND host K8s × vCluster compat checks (--host-target). Either or both may be set.
 	type entry struct {
 		Tenant   vcluster.Tenant
 		Findings []finding.Finding
@@ -103,13 +112,13 @@ func runFleet(ctx context.Context, o *fleetOpts) error {
 	var entries []entry
 	for _, t := range tenants {
 		var fs []finding.Finding
-		// Use the package's exported Analyze on a single-tenant slice when target set.
-		if vcTarget != nil {
+		if vcTarget != nil || hostTarget != nil {
 			fs, _ = vcluster.Analyze(ctx, client.Core, vcluster.Options{
 				Namespace:   t.Namespace,
 				ReleaseName: t.ReleaseName,
 				Target:      vcTarget,
 				HostVersion: hostV,
+				HostTarget:  hostTarget,
 			})
 		}
 		entries = append(entries, entry{Tenant: t, Findings: fs, Score: scoreTenant(t, fs)})

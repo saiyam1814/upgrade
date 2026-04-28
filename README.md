@@ -71,9 +71,29 @@ kubectl upgrade run verify --target v1.34
 # Got stuck? This is the recovery toolkit:
 kubectl upgrade unstick
 
-# Have vCluster Tenant Clusters? After host bump:
+# Have vClusters? Check which tenants are compatible with the
+# upcoming host K8s bump BEFORE you bump the host:
 kubectl upgrade fleet --host-target v1.34 --plan
 ```
+
+## Fleet — host × vCluster compat
+
+When you bump a Control Plane Cluster's K8s minor (e.g. EKS 1.32→1.34),
+not every vCluster version on it will tolerate the new host. `fleet`
+runs a per-tenant check and tells you which tenants need to be bumped
+**before** the host upgrade and which are safe.
+
+```bash
+kubectl upgrade fleet --host-target v1.34 --plan
+```
+
+Output for each tenant — three states:
+
+- ✓ INFO — current vCluster supports the new host K8s. Safe.
+- ⚠ MEDIUM — at the upper edge of the support window. Plan a tenant bump after the host.
+- ✗ BLOCKER — tenant's vCluster version does NOT support the new host. Bump the tenant first; the runbook tells you the minimum vCluster version to bump to.
+
+The compat table is hand-curated from upstream vCluster release notes; PRs welcome to extend it as new releases land.
 
 ## Visual mode
 
@@ -140,7 +160,7 @@ See [SAFETY.md](./SAFETY.md) for the full safety contract.
 | Deprecated APIs | Vendored snapshot of [`FairwindsOps/pluto`](https://github.com/FairwindsOps/pluto) `versions.yaml` (Apache 2.0) | k8s, cert-manager, istio, prom-operator, several others |
 | Feature gates / defaults / kubelet / kernel | Hand-curated from upstream Kubernetes release notes | 1.25 → 1.36 |
 | Addon ↔ K8s compat | Hand-curated from each project's release notes | cert-manager, Karpenter, Istio, ArgoCD, Flux, prom-operator, Kyverno, ingress-nginx |
-| vCluster decision tree | loft.sh docs + release notes | v0.20 → v0.34 |
+| vCluster decision tree | upstream vCluster docs + release notes | v0.20 → v0.34 |
 
 PRs to extend coverage are welcome.
 
@@ -170,13 +190,3 @@ make refresh-rules # bump pluto's versions.yaml
 ## License
 
 Apache 2.0. The bundled `versions.yaml` snapshot from [`FairwindsOps/pluto`](https://github.com/FairwindsOps/pluto) is also Apache 2.0.
-
-## Terminology
-
-This project uses loft.sh's current vCluster terminology:
-
-- **Tenant Cluster** (the vCluster instance running on top)
-- **Control Plane Cluster** (the underlying real Kubernetes cluster)
-- **Virtual Control Plane** (the vCluster control-plane component)
-- **Tenant Isolation** (the security/separation model)
-- **AI Cloud** (the cloud-provider category)

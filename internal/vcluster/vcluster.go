@@ -15,8 +15,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -28,8 +30,9 @@ import (
 type Options struct {
 	Namespace   string       // limit to a namespace
 	ReleaseName string       // limit to one release
-	Target      *apis.Semver // upgrade target (vCluster version, e.g. v0.34)
-	HostVersion string       // Control Plane Cluster apiserver version (gitVersion)
+	Target      *apis.Semver // upgrade target (vCluster product version, e.g. v0.34)
+	HostVersion string       // current Control Plane Cluster apiserver version (gitVersion)
+	HostTarget  *apis.Semver // future Control Plane Cluster K8s minor (e.g. v1.34) — checks per-tenant compat with the host bump
 }
 
 // Tenant is a discovered vCluster Tenant Cluster on the Control Plane Cluster.
@@ -52,26 +55,53 @@ func Analyze(ctx context.Context, core kubernetes.Interface, opts Options) ([]fi
 	var findings []finding.Finding
 	for _, t := range tenants {
 		findings = append(findings, evaluate(t, opts.Target)...)
+		if opts.HostTarget != nil {
+			findings = append(findings, evaluateHostUpgrade(t, *opts.HostTarget)...)
+		}
 	}
 	return findings, errs
 }
 
 // Discover finds Helm releases whose chart is "vcluster" / "vcluster-k8s".
+//
+// Helm v3 stores ONE Secret per release REVISION, named
+// `sh.helm.release.v1.<release>.v<rev>`. We collapse to one row per
+// (namespace, release-name) — keeping only the highest revision —
+// before evaluation, otherwise a release that's been upgraded shows
+// up N times in fleet output.
 func Discover(ctx context.Context, core kubernetes.Interface, ns, name string) ([]Tenant, []error) {
-	var (
-		out  []Tenant
-		errs []error
-	)
+	var errs []error
 	secrets, err := core.CoreV1().Secrets(ns).List(ctx, metav1.ListOptions{
 		LabelSelector: "owner=helm",
 	})
 	if err != nil {
 		return nil, []error{fmt.Errorf("list helm secrets: %w", err)}
 	}
+	// Bucket by (namespace, release-name) → highest-revision secret.
+	type bucketKey struct{ ns, rel string }
+	type latest struct {
+		secret corev1.Secret
+		rev    int
+	}
+	buckets := map[bucketKey]latest{}
 	for _, s := range secrets.Items {
 		if s.Type != "helm.sh/release.v1" || len(s.Data["release"]) == 0 {
 			continue
 		}
+		relName := s.Labels["name"]
+		if relName == "" {
+			continue
+		}
+		rev, _ := strconv.Atoi(s.Labels["version"])
+		k := bucketKey{s.Namespace, relName}
+		if cur, ok := buckets[k]; !ok || rev > cur.rev {
+			buckets[k] = latest{secret: s, rev: rev}
+		}
+	}
+
+	out := make([]Tenant, 0, len(buckets))
+	for _, b := range buckets {
+		s := b.secret
 		rel, err := decodeRelease(s.Data["release"])
 		if err != nil {
 			errs = append(errs, fmt.Errorf("%s/%s: %w", s.Namespace, s.Name, err))
@@ -289,6 +319,114 @@ func evaluate(t Tenant, target *apis.Semver) []finding.Finding {
 		Detail:   "Ensure the Virtual Control Plane is awake (not sleeping) before running snapshot or upgrade — sleeping Tenants block both operations.",
 	})
 
+	return out
+}
+
+// HostCompat is one row of the (vCluster minor) × (host K8s minor range)
+// support matrix. Hand-curated from upstream vCluster release notes.
+// PRs welcome to extend coverage as new vCluster releases land.
+type HostCompat struct {
+	VClusterMin apis.Semver // vCluster minor (inclusive)
+	VClusterMax apis.Semver // vCluster minor (exclusive)
+	HostK8sMin  apis.Semver // earliest tested host K8s minor (inclusive)
+	HostK8sMax  apis.Semver // latest tested host K8s minor (inclusive)
+	Notes       string
+}
+
+// hostCompat is the curated compatibility table for vCluster ↔ host K8s.
+// Each row covers a vCluster minor band and the host K8s window that band
+// has been tested against. Rows must be ordered by VClusterMin ascending.
+var hostCompat = []HostCompat{
+	{VClusterMin: apis.MustParse("v0.20"), VClusterMax: apis.MustParse("v0.22"), HostK8sMin: apis.MustParse("v1.26"), HostK8sMax: apis.MustParse("v1.30")},
+	{VClusterMin: apis.MustParse("v0.22"), VClusterMax: apis.MustParse("v0.24"), HostK8sMin: apis.MustParse("v1.27"), HostK8sMax: apis.MustParse("v1.31")},
+	{VClusterMin: apis.MustParse("v0.24"), VClusterMax: apis.MustParse("v0.25"), HostK8sMin: apis.MustParse("v1.28"), HostK8sMax: apis.MustParse("v1.32")},
+	{VClusterMin: apis.MustParse("v0.25"), VClusterMax: apis.MustParse("v0.28"), HostK8sMin: apis.MustParse("v1.29"), HostK8sMax: apis.MustParse("v1.33")},
+	{VClusterMin: apis.MustParse("v0.28"), VClusterMax: apis.MustParse("v0.31"), HostK8sMin: apis.MustParse("v1.29"), HostK8sMax: apis.MustParse("v1.34")},
+	{VClusterMin: apis.MustParse("v0.31"), VClusterMax: apis.MustParse("v0.34"), HostK8sMin: apis.MustParse("v1.30"), HostK8sMax: apis.MustParse("v1.35")},
+	{VClusterMin: apis.MustParse("v0.34"), VClusterMax: apis.MustParse("v0.99"), HostK8sMin: apis.MustParse("v1.31"), HostK8sMax: apis.MustParse("v1.36")},
+}
+
+// findHostCompat returns the row whose vCluster band covers v.
+func findHostCompat(v apis.Semver) *HostCompat {
+	for i := range hostCompat {
+		if !v.Less(hostCompat[i].VClusterMin) && v.Less(hostCompat[i].VClusterMax) {
+			return &hostCompat[i]
+		}
+	}
+	return nil
+}
+
+// minVClusterFor returns the lowest vCluster minor that supports the
+// given host K8s version. Used to suggest a target tenant version when
+// the host bump is going past the current tenant's compat window.
+func minVClusterFor(hostK8s apis.Semver) (apis.Semver, bool) {
+	for i := range hostCompat {
+		row := hostCompat[i]
+		if !hostK8s.Less(row.HostK8sMin) && !row.HostK8sMax.Less(hostK8s) {
+			return row.VClusterMin, true
+		}
+	}
+	return apis.Semver{}, false
+}
+
+// evaluateHostUpgrade emits findings about how a Control Plane Cluster
+// K8s bump (--host-target) will affect this Tenant Cluster:
+//
+//  1. If the tenant's current vCluster version DOESN'T support the new
+//     host K8s — emit BLOCKER with a target vCluster version that does.
+//  2. If support is right at the edge (host K8s == HostK8sMax of band) —
+//     emit MEDIUM advisory to plan a tenant bump after the host.
+//  3. INFO line with the discovered (vCluster, host-window) pair.
+func evaluateHostUpgrade(t Tenant, hostTarget apis.Semver) []finding.Finding {
+	src := finding.Source{Kind: "live", Location: fmt.Sprintf("helm:%s/%s", t.Namespace, t.ReleaseName)}
+	row := findHostCompat(t.Version)
+	if row == nil {
+		return []finding.Finding{{
+			Severity: finding.Medium,
+			Category: finding.CategoryVCluster,
+			Title:    fmt.Sprintf("Tenant %s/%s on vCluster %s — host-target %s compat unknown", t.Namespace, t.ReleaseName, t.Version, hostTarget),
+			Detail:   "No compat row matches this vCluster version; treat as untested.",
+			Source:   src,
+			Fix:      "Verify the upstream vCluster release notes for host K8s support for this version.",
+		}}
+	}
+
+	var out []finding.Finding
+	switch {
+	case hostTarget.Less(row.HostK8sMin) || row.HostK8sMax.Less(hostTarget):
+		// Host target outside the tenant's support window → BLOCKER.
+		min, ok := minVClusterFor(hostTarget)
+		recommend := "an officially supported vCluster version for this host K8s"
+		if ok {
+			recommend = "vCluster ≥ " + min.String()
+		}
+		out = append(out, finding.Finding{
+			Severity: finding.Blocker,
+			Category: finding.CategoryVCluster,
+			Title:    fmt.Sprintf("Tenant %s/%s vCluster %s does NOT support host K8s %s (window %s … %s)", t.Namespace, t.ReleaseName, t.Version, hostTarget, row.HostK8sMin, row.HostK8sMax),
+			Detail:   fmt.Sprintf("Bumping the Control Plane Cluster to %s without first bumping the tenant to a compatible vCluster version risks reconciliation drift, sync errors, and admission failures inside the tenant.", hostTarget),
+			Source:   src,
+			Fix:      fmt.Sprintf("BEFORE bumping the host: upgrade Tenant %s/%s to %s. Then bump the host. Tenant-bump first, host-bump second is the loft-recommended order.", t.Namespace, t.ReleaseName, recommend),
+			Docs:     []string{"https://www.vcluster.com/docs/vcluster/manage/upgrade/supported_versions"},
+		})
+	case hostTarget.Equal(row.HostK8sMax):
+		// Host hitting the upper edge of the tenant's window → advisory.
+		out = append(out, finding.Finding{
+			Severity: finding.Medium,
+			Category: finding.CategoryVCluster,
+			Title:    fmt.Sprintf("Tenant %s/%s vCluster %s — host K8s %s is the upper edge of the supported window (%s … %s)", t.Namespace, t.ReleaseName, t.Version, hostTarget, row.HostK8sMin, row.HostK8sMax),
+			Detail:   "Future host bumps will require a tenant vCluster bump first.",
+			Source:   src,
+			Fix:      "After this host upgrade, plan to bump this tenant to the next vCluster minor band before the next host bump.",
+		})
+	default:
+		out = append(out, finding.Finding{
+			Severity: finding.Info,
+			Category: finding.CategoryVCluster,
+			Title:    fmt.Sprintf("Tenant %s/%s vCluster %s supports host K8s %s ✓ (window %s … %s)", t.Namespace, t.ReleaseName, t.Version, hostTarget, row.HostK8sMin, row.HostK8sMax),
+			Source:   src,
+		})
+	}
 	return out
 }
 
