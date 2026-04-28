@@ -203,7 +203,7 @@ footer a { color: var(--accent); text-decoration: none; }
         <li><a href="#why">Why</a></li>
         <li><a href="#flow">Flow</a></li>
         <li><a href="#install">Install</a></li>
-        <li><a href="#commands">Commands</a></li>
+        <li><a href="usage.html">Usage</a></li>
         <li><a href="https://github.com/saiyam1814/upgrade">GitHub</a></li>
       </ul>
     </nav>
@@ -330,24 +330,24 @@ kubectl-upgrade --help</code></pre></div>
 
 <section id="commands" class="container">
   <h2>Commands</h2>
-  <p class="lead">Three top-level flows plus a toolkit. Run <code>kubectl upgrade &lt;cmd&gt; --help</code> for examples.</p>
+  <p class="lead">Three top-level flows plus a toolkit. Click any command to jump to its usage doc, or see the <a href="usage.html">full usage page</a>.</p>
   <table>
     <tr><th>Command</th><th>Purpose</th></tr>
-    <tr><td><code>preflight</code></td><td>scan + simulate + addons + pdb + volumes + vcluster</td></tr>
-    <tr><td><code>run plan</code></td><td>Emit cloud-CLI commands for control plane + nodes</td></tr>
-    <tr><td><code>run watch</code></td><td>Monitor in-flight upgrade for stuck states</td></tr>
-    <tr><td><code>run verify</code></td><td>Post-upgrade verification</td></tr>
-    <tr><td><code>fleet</code></td><td>vCluster Tenant Cluster wave orchestration</td></tr>
-    <tr><td><code>scan</code></td><td>Deprecated APIs (manifests + Helm + live)</td></tr>
-    <tr><td><code>simulate</code></td><td>Forward sim: feature gates, defaults, kubelet, kernel</td></tr>
-    <tr><td><code>pdb</code></td><td>Drain-deadlock detector</td></tr>
-    <tr><td><code>addons</code></td><td>cert-manager / Istio / Karpenter / ArgoCD / Flux compat</td></tr>
-    <tr><td><code>volumes</code></td><td>PV / PVC / CSI / StorageClass safety</td></tr>
-    <tr><td><code>vcluster</code></td><td>Per-Tenant-Cluster decision tree</td></tr>
-    <tr><td><code>unstick</code></td><td>Stuck-state recovery toolkit</td></tr>
-    <tr><td><code>plan</code></td><td>Chained one-minor-at-a-time path</td></tr>
-    <tr><td><code>report</code></td><td>Combined report (human / JSON / Markdown / SARIF)</td></tr>
-    <tr><td><code>tui</code></td><td>Interactive visual upgrade dashboard</td></tr>
+    <tr><td><a href="usage.html#cmd-preflight"><code>preflight</code></a></td><td>scan + simulate + addons + pdb + volumes + vcluster</td></tr>
+    <tr><td><a href="usage.html#cmd-run"><code>run plan</code></a></td><td>Emit cloud-CLI commands for control plane + nodes</td></tr>
+    <tr><td><a href="usage.html#cmd-run"><code>run watch</code></a></td><td>Monitor in-flight upgrade for stuck states</td></tr>
+    <tr><td><a href="usage.html#cmd-run"><code>run verify</code></a></td><td>Post-upgrade verification</td></tr>
+    <tr><td><a href="usage.html#cmd-fleet"><code>fleet</code></a></td><td>vCluster Tenant Cluster wave + host × vCluster compat</td></tr>
+    <tr><td><a href="usage.html#cmd-scan"><code>scan</code></a></td><td>Deprecated APIs (manifests + Helm + live)</td></tr>
+    <tr><td><a href="usage.html#cmd-simulate"><code>simulate</code></a></td><td>Forward sim: feature gates, defaults, kubelet, kernel</td></tr>
+    <tr><td><a href="usage.html#cmd-pdb"><code>pdb</code></a></td><td>Drain-deadlock detector</td></tr>
+    <tr><td><a href="usage.html#cmd-addons"><code>addons</code></a></td><td>cert-manager / Istio / Karpenter / ArgoCD / Flux compat</td></tr>
+    <tr><td><a href="usage.html#cmd-volumes"><code>volumes</code></a></td><td>PV / PVC / CSI / StorageClass safety</td></tr>
+    <tr><td><a href="usage.html#cmd-vcluster"><code>vcluster</code></a></td><td>Per-Tenant-Cluster decision tree</td></tr>
+    <tr><td><a href="usage.html#cmd-unstick"><code>unstick</code></a></td><td>Stuck-state recovery toolkit</td></tr>
+    <tr><td><a href="usage.html#cmd-plan"><code>plan</code></a></td><td>Chained one-minor-at-a-time path</td></tr>
+    <tr><td><a href="usage.html#cmd-report"><code>report</code></a></td><td>Combined report (human / JSON / Markdown / SARIF)</td></tr>
+    <tr><td><a href="usage.html#cmd-tui"><code>tui</code></a></td><td>Interactive visual upgrade dashboard</td></tr>
   </table>
 </section>
 

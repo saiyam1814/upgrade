@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage — kubectl-upgrade</title>
+<meta name="description" content="Per-command usage docs, CI recipes, troubleshooting for kubectl-upgrade.">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<style>
+:root {
+  --bg: #0b1020; --bg2: #11172e; --fg: #e6edf7; --muted: #8b9bb5;
+  --accent: #22d3ee; --accent2: #3b82f6;
+  --warn: #fbbf24; --err: #ef4444; --ok: #34d399;
+  --border: #1f2a44; --code-bg: #0f1530;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: radial-gradient(circle at 20% 0%, #1a2350 0%, var(--bg) 50%);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+.container { max-width: 1000px; margin: 0 auto; padding: 0 1.5rem; }
+header { padding: 1.5rem 0; }
+nav { display: flex; align-items: center; justify-content: space-between; }
+nav .brand { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; font-size: 1.05rem; color: var(--fg); text-decoration: none; }
+nav .brand img { width: 26px; height: 26px; }
+nav ul { display: flex; gap: 1.4rem; list-style: none; padding: 0; margin: 0; }
+nav a { color: var(--muted); text-decoration: none; font-size: 0.95rem; }
+nav a:hover, nav a.active { color: var(--fg); }
+
+.layout { display: grid; grid-template-columns: 220px 1fr; gap: 2rem; padding: 2rem 0 4rem; }
+@media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+
+aside.toc {
+  position: sticky;
+  top: 1rem;
+  align-self: start;
+  font-size: 0.9rem;
+  border-left: 1px solid var(--border);
+  padding-left: 1rem;
+}
+aside.toc h3 { color: var(--muted); margin: 0 0 0.5rem; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; }
+aside.toc ul { list-style: none; padding: 0; margin: 0 0 1.2rem; }
+aside.toc a { color: var(--muted); text-decoration: none; display: block; padding: 0.18rem 0; }
+aside.toc a:hover { color: var(--fg); }
+
+main h1 { font-size: 2rem; margin: 0 0 0.4rem; letter-spacing: -0.01em; }
+main h2 { font-size: 1.4rem; margin: 2.2rem 0 0.5rem; padding-top: 0.8rem; border-top: 1px solid var(--border); }
+main h2:first-of-type { border-top: none; padding-top: 0; }
+main h3 { font-size: 1.1rem; margin: 1.5rem 0 0.4rem; color: var(--accent); }
+main p { color: var(--fg); }
+main p.lead { color: var(--muted); margin-top: 0; }
+
+pre {
+  background: var(--code-bg); border: 1px solid var(--border);
+  padding: 0.9rem 1.1rem; border-radius: 8px; overflow-x: auto;
+  font-size: 0.86rem; line-height: 1.55;
+  font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+}
+code {
+  background: var(--code-bg); padding: 0.12rem 0.36rem;
+  border-radius: 4px; font-size: 0.88em;
+  font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+}
+pre code { background: transparent; padding: 0; }
+
+table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+table th, table td { text-align: left; padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+table th { color: var(--muted); font-weight: 600; }
+
+.term {
+  background: #050811; border: 1px solid var(--border);
+  border-radius: 8px; padding: 0.9rem 1.1rem;
+  font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+  font-size: 0.84rem; line-height: 1.55;
+  overflow-x: auto; white-space: pre; margin: 0.7rem 0 1rem;
+}
+.term .red { color: #ef4444; } .term .yel { color: #fbbf24; }
+.term .grn { color: #34d399; } .term .cyn { color: #22d3ee; }
+.term .gry { color: #6b7c93; } .term .mag { color: #c084fc; }
+
+.note {
+  border-left: 3px solid var(--accent);
+  padding: 0.6rem 0.9rem; background: rgba(34,211,238,0.06);
+  border-radius: 0 8px 8px 0; margin: 0.8rem 0; font-size: 0.92rem;
+}
+.warn {
+  border-left: 3px solid var(--warn);
+  padding: 0.6rem 0.9rem; background: rgba(251,191,36,0.06);
+  border-radius: 0 8px 8px 0; margin: 0.8rem 0; font-size: 0.92rem;
+}
+
+footer {
+  text-align: center; padding: 2rem 0; color: var(--muted); font-size: 0.9rem;
+  border-top: 1px solid var(--border); margin-top: 3rem;
+}
+footer a { color: var(--accent); text-decoration: none; }
+.dim { color: var(--muted); }
+</style>
+</head>
+<body>
+<header><div class="container"><nav>
+  <a class="brand" href="."><img src="logo.svg" alt="logo"> kubectl-upgrade</a>
+  <ul>
+    <li><a href="./">Home</a></li>
+    <li><a class="active" href="usage.html">Usage</a></li>
+    <li><a href="https://github.com/saiyam1814/upgrade">GitHub</a></li>
+  </ul>
+</nav></div></header>
+
+<div class="container layout">
+
+<aside class="toc">
+  <h3>On this page</h3>
+  <ul>
+    <li><a href="#quickstart">Quickstart</a></li>
+    <li><a href="#flags">Common flags</a></li>
+    <li><a href="#formats">Output formats</a></li>
+  </ul>
+  <h3>Commands</h3>
+  <ul>
+    <li><a href="#cmd-preflight">preflight</a></li>
+    <li><a href="#cmd-run">run plan / watch / verify</a></li>
+    <li><a href="#cmd-fleet">fleet</a></li>
+    <li><a href="#cmd-scan">scan</a></li>
+    <li><a href="#cmd-simulate">simulate</a></li>
+    <li><a href="#cmd-pdb">pdb</a></li>
+    <li><a href="#cmd-addons">addons</a></li>
+    <li><a href="#cmd-volumes">volumes</a></li>
+    <li><a href="#cmd-vcluster">vcluster</a></li>
+    <li><a href="#cmd-unstick">unstick</a></li>
+    <li><a href="#cmd-plan">plan</a></li>
+    <li><a href="#cmd-report">report</a></li>
+    <li><a href="#cmd-tui">tui</a></li>
+  </ul>
+  <h3>Recipes</h3>
+  <ul>
+    <li><a href="#ci">CI / CD</a></li>
+    <li><a href="#findings">Finding severities</a></li>
+    <li><a href="#safety">Safety contract</a></li>
+  </ul>
+</aside>
+
+<main>
+
+<h1>Usage</h1>
+<p class="lead">Every command's purpose, an example invocation, what the output looks like, the flags that matter. Nothing's hidden behind <code>--help</code>.</p>
+
+<h2 id="quickstart">Quickstart</h2>
+<p>The day-1 production flow takes about 5 minutes from install to "you're upgrading."</p>
+<pre><code># 1. Install
+curl -sSL https://raw.githubusercontent.com/saiyam1814/upgrade/main/install.sh | sh
+
+# 2. Find what'll break
+kubectl upgrade preflight --target v1.34
+
+# 3. Get the cloud-CLI runbook
+kubectl upgrade run plan --target v1.34
+
+# 4. (You manually run the emitted commands.)
+#    In a separate terminal, watch for stuck states:
+kubectl upgrade run watch
+
+# 5. After the upgrade finishes, verify
+kubectl upgrade run verify --target v1.34</code></pre>
+
+<h2 id="flags">Common flags</h2>
+<table>
+  <tr><th>Flag</th><th>Default</th><th>Purpose</th></tr>
+  <tr><td><code>--target vX.Y</code></td><td>required for most</td><td>The Kubernetes minor you're upgrading to.</td></tr>
+  <tr><td><code>--kubeconfig PATH</code></td><td><code>$KUBECONFIG</code> / <code>~/.kube/config</code></td><td>Override kubeconfig path.</td></tr>
+  <tr><td><code>--context NAME</code></td><td>current-context</td><td>Override kubeconfig context.</td></tr>
+  <tr><td><code>--format human|json|md|sarif</code></td><td><code>human</code></td><td>Output format.</td></tr>
+  <tr><td><code>-o, --output FILE</code></td><td>stdout</td><td>Write report to a file.</td></tr>
+  <tr><td><code>--fail-on blocker|high|medium|low|none</code></td><td><code>blocker</code></td><td>Exit non-zero when a finding ≥ this severity exists. CI gate.</td></tr>
+</table>
+
+<h2 id="formats">Output formats</h2>
+<p><code>human</code> is the default, color-aware terminal output. Pick a structured format for CI or sharing:</p>
+<table>
+  <tr><th>Format</th><th>Use case</th></tr>
+  <tr><td><code>--format json</code></td><td>Pipe to <code>jq</code>, store as artifact, parse from scripts.</td></tr>
+  <tr><td><code>--format md</code></td><td>Paste into a PR description or issue.</td></tr>
+  <tr><td><code>--format sarif</code></td><td>Upload to GitHub code scanning / GitLab Code Quality.</td></tr>
+</table>
+
+<!-- ============== preflight ============== -->
+<h2 id="cmd-preflight">preflight</h2>
+<p class="lead">The day-1 entry point. Runs every workload-side safety check and produces one combined report.</p>
+<pre><code>kubectl upgrade preflight --target v1.34</code></pre>
+<p>It runs, in order:</p>
+<ol>
+  <li><strong>scan</strong> — deprecated APIs in live cluster + Helm releases</li>
+  <li><strong>simulate</strong> — feature gates / defaults / kubelet / kernel changes between current and target</li>
+  <li><strong>addons</strong> — cert-manager / Karpenter / Istio / ArgoCD / Flux / prom-operator / Kyverno / ingress-nginx compat</li>
+  <li><strong>pdb</strong> — drain-deadlock detector</li>
+  <li><strong>volumes</strong> — PV/PVC/CSI/StorageClass safety</li>
+  <li><strong>vcluster</strong> — Tenant Cluster decision tree (if any vClusters detected)</li>
+</ol>
+<p>Sample output:</p>
+<div class="term"><span class="cyn">▎ Preflight</span>
+<span class="gry">  v1.30.4 → v1.34</span>
+
+<span class="grn">✓</span> scan: 21 objects walked
+<span class="grn">✓</span> simulate: forward changes added
+<span class="grn">✓</span> addons: compat checked
+<span class="grn">✓</span> pdb: drain feasibility checked
+<span class="grn">✓</span> volumes: PV/PVC/CSI checked
+<span class="grn">✓</span> vcluster: Tenant-Cluster gates checked
+
+Summary: 1 BLOCKER · 1 HIGH · 8 MEDIUM · 0 LOW · 0 INFO
+
+BLOCKERS
+  <span class="red">✗</span> PDB e2e/redis-pdb-broken ALLOWED DISRUPTIONS == 0 (will deadlock drain)
+      OBJECT:  policy/v1 PodDisruptionBudget e2e/redis-pdb-broken
+      FIX:     Increase replicas (≥ desiredHealthy + 1), OR maxUnavailable=1
+HIGH
+  <span class="yel">⚠</span> [v1.31] cgroup v1 support deprecated in kubelet</div>
+<p><strong>Useful flags:</strong> <code>--skip-vcluster</code>, <code>--fail-on blocker</code>.</p>
+
+<!-- ============== run ============== -->
+<h2 id="cmd-run">run plan · run watch · run verify</h2>
+<p class="lead">The conductor. Three subcommands wrap a real upgrade end-to-end.</p>
+
+<h3>run plan</h3>
+<p>Detects your provider (EKS, GKE, AKS, OpenShift, RKE2, k3s, Talos, kubeadm, vCluster) and emits the exact cloud-CLI commands. <strong>It does not execute them.</strong></p>
+<pre><code>kubectl upgrade run plan --target v1.34</code></pre>
+<div class="term"><span class="cyn">▎ Upgrade Runbook</span>
+<span class="gry">  v1.30.4 → v1.34   provider: gke</span>
+
+<span class="cyn">[1/6]</span> <span style="font-weight:bold">Pre-flight scan</span>
+    <span class="cyn">→</span> Run pre-flight to find every workload-side time bomb:
+    <span class="mag">$ kubectl upgrade preflight --target v1.34</span>
+
+<span class="cyn">[3/6]</span> <span style="font-weight:bold">Control-plane upgrade (gke)</span>
+    <span class="cyn">→</span> Verify auth + current state:
+    <span class="mag">$ gcloud auth list</span>
+    <span class="mag">$ gcloud container clusters describe &lt;cluster-name&gt; --zone us-central1-a --format='value(currentMasterVersion)'</span>
+    <span class="cyn">→</span> Run the control-plane upgrade:
+    <span class="mag">$ gcloud container clusters upgrade &lt;cluster-name&gt; --master --cluster-version=1.34 --zone us-central1-a</span></div>
+<p>Zonal vs regional GKE clusters use the right flag automatically.</p>
+
+<h3>run watch</h3>
+<p>Polls the cluster on an interval and surfaces every stuck pattern as it appears. Run in a separate terminal while the upgrade is in progress.</p>
+<pre><code>kubectl upgrade run watch                # 30s interval, 60min cap
+kubectl upgrade run watch --interval 10  # be more aggressive
+kubectl upgrade run watch --stop-after 120</code></pre>
+<p>Stops after 3 consecutive clean cycles AND the server version matches your target — then suggests <code>run verify</code>.</p>
+
+<h3>run verify</h3>
+<p>Post-upgrade verification. Confirms server version, no NotReady nodes, no critical operator CrashLoopBackoff, no stuck states.</p>
+<pre><code>kubectl upgrade run verify --target v1.34</code></pre>
+<div class="term"><span class="cyn">▎ Verify upgrade</span>
+<span class="gry">  target v1.34</span>
+
+<span class="grn">✓</span> server version v1.34.5-gke.1153000 matches target
+<span class="grn">✓</span> no stuck states detected</div>
+
+<!-- ============== fleet ============== -->
+<h2 id="cmd-fleet">fleet</h2>
+<p class="lead">vCluster Tenant Cluster wave orchestration. When the host bumps, every tenant gets a per-tenant pre-flight + ordered upgrade wave.</p>
+
+<h3>Status (no flags)</h3>
+<pre><code>kubectl upgrade fleet</code></pre>
+<p>Lists every Tenant Cluster on this Control Plane Cluster — vCluster version, distro, topology, backing store.</p>
+
+<h3>Host bump check (the answer to "is my host upgrade safe for my fleet?")</h3>
+<pre><code>kubectl upgrade fleet --host-target v1.34 --plan</code></pre>
+<p>For each tenant, runs the host × vCluster compat matrix:</p>
+<table>
+  <tr><th>vCluster band</th><th>Supported host K8s window</th></tr>
+  <tr><td><code>v0.20 – v0.21</code></td><td>1.26 … 1.30</td></tr>
+  <tr><td><code>v0.22 – v0.23</code></td><td>1.27 … 1.31</td></tr>
+  <tr><td><code>v0.24</code></td><td>1.28 … 1.32</td></tr>
+  <tr><td><code>v0.25 – v0.27</code></td><td>1.29 … 1.33</td></tr>
+  <tr><td><code>v0.28 – v0.30</code></td><td>1.29 … 1.34</td></tr>
+  <tr><td><code>v0.31 – v0.33</code></td><td>1.30 … 1.35</td></tr>
+  <tr><td><code>v0.34+</code></td><td>1.31 … 1.36</td></tr>
+</table>
+<p>Three states per tenant:</p>
+<ul>
+  <li><strong>✓ INFO</strong> — current vCluster supports the new host. Safe.</li>
+  <li><strong>⚠ MEDIUM</strong> — at the upper edge. Plan a tenant bump after the host.</li>
+  <li><strong>✗ BLOCKER</strong> — outside the window. Bump the tenant first; the runbook tells you the minimum vCluster version.</li>
+</ul>
+
+<h3>Wave plan + per-tenant runbook</h3>
+<pre><code>kubectl upgrade fleet --vcluster-target v0.34.0 --plan</code></pre>
+<p>Emits a sequenced wave (BLOCKERs first → external-etcd → embedded-etcd → Deployment topology last). Each step:</p>
+<div class="term"><span class="cyn">[1/2]</span> Tenant Cluster team-a/vc-team-a
+    <span class="cyn">→</span> Snapshot before mutating:
+    <span class="mag">$ vcluster snapshot create vc-team-a -n team-a oci://&lt;reg&gt;/&lt;repo&gt;:vc-team-a-pre-upgrade</span>
+    <span class="cyn">→</span> Upgrade Tenant Cluster:
+    <span class="mag">$ helm upgrade --install vc-team-a vcluster --repo https://charts.loft.sh --version v0.34.0 -n team-a --reuse-values</span></div>
+
+<!-- ============== scan ============== -->
+<h2 id="cmd-scan">scan</h2>
+<p class="lead">Deprecated APIs in live cluster + Helm releases + raw manifests.</p>
+<pre><code># Live cluster + Helm release secrets (default)
+kubectl upgrade scan --target v1.34
+
+# Just static manifests
+kubectl upgrade scan --target v1.34 --source manifests --path ./k8s/
+
+# Combine sources
+kubectl upgrade scan --target v1.34 --source live,helm,manifests --path ./k8s/
+
+# CI gate
+kubectl upgrade scan --target v1.34 --fail-on blocker</code></pre>
+<p>Helm-release scanning catches "shadow APIs" — objects baked into a release whose API the apiserver may no longer serve. Helm v3 stores one Secret per release revision; scan dedupes to the latest revision per release.</p>
+
+<!-- ============== simulate ============== -->
+<h2 id="cmd-simulate">simulate</h2>
+<p class="lead">Forward simulator: feature gates / defaults / kubelet flags / kernel reqs that activate between two minors.</p>
+<pre><code>kubectl upgrade simulate --from v1.31 --to v1.34</code></pre>
+<p>Surfaces things <code>scan</code> can't: PSA enforcement defaults flipping, cgroup v1 deprecation/removal, kubelet flag removals, scheduler queueing-hints, in-tree → CSI migration, etc. Curated through K8s 1.36.</p>
+
+<!-- ============== pdb ============== -->
+<h2 id="cmd-pdb">pdb</h2>
+<p class="lead">PodDisruptionBudgets that would deadlock a node drain.</p>
+<pre><code>kubectl upgrade pdb</code></pre>
+<p>Flags every PDB where <code>ALLOWED DISRUPTIONS == 0</code> — the canonical "stuck upgrade" pattern. Also flags PDBs whose selector matches zero pods (configuration drift).</p>
+<div class="warn">A PDB with <code>minAvailable: 1</code> and <code>replicas: 1</code> is the most common upgrade-blocker. Either add a second replica, set <code>maxUnavailable: 1</code>, or accept downtime.</div>
+
+<!-- ============== addons ============== -->
+<h2 id="cmd-addons">addons</h2>
+<p class="lead">Compatibility check for installed third-party controllers against a target K8s version.</p>
+<pre><code>kubectl upgrade addons --target v1.34</code></pre>
+<p>Detects: cert-manager, Karpenter, Istio, ArgoCD, Flux, prometheus-operator, Kyverno, ingress-nginx. For each: emits the supported K8s window and flags incompatible target combos.</p>
+<div class="note">ingress-nginx is a special case — the project retired 2026-03-31. The check always emits a HIGH advisory regardless of target.</div>
+
+<!-- ============== volumes ============== -->
+<h2 id="cmd-volumes">volumes</h2>
+<p class="lead">PV / PVC / CSI / StorageClass safety surface.</p>
+<pre><code>kubectl upgrade volumes --target v1.34</code></pre>
+<p>What it catches:</p>
+<ul>
+  <li>StorageClasses on in-tree provisioners whose CSI driver isn't installed (in-tree removed in 1.31+)</li>
+  <li>Pending PVCs that will block pod reschedule on drain</li>
+  <li>Deployments mounting PVCs (wrong primitive — use StatefulSet)</li>
+  <li>StatefulSets with replicas=1 (outage window during node drain)</li>
+  <li>ReadWriteMany volumes on cloud classes mid-removal</li>
+  <li>Released PVs that should be reclaimed</li>
+  <li>Missing VolumeSnapshotClass (needed for safe pre-upgrade snapshots)</li>
+</ul>
+
+<!-- ============== vcluster ============== -->
+<h2 id="cmd-vcluster">vcluster</h2>
+<p class="lead">Per-Tenant-Cluster decision tree. Where <code>fleet</code> works at the herd level, <code>vcluster</code> drills into each tenant's product-version upgrade path.</p>
+<pre><code>kubectl upgrade vcluster --target v0.34.0
+kubectl upgrade vcluster --explain   # dump the entire decision tree</code></pre>
+<p>Gates checked:</p>
+<ol>
+  <li>Pre-v0.20 sources need <code>vcluster convert config</code> (values.yaml → vcluster.yaml)</li>
+  <li>Distro removal: k3s removed v0.33, k0s v0.26, eks v0.20</li>
+  <li>Skip-minor refusal — emits a chained per-minor plan</li>
+  <li>etcd 3.5 → 3.6 transition crossing v0.29</li>
+  <li>Topology safety (Deployment + non-external state = data loss)</li>
+  <li>Backup reminder (downgrades are unsupported after v0.20)</li>
+  <li>Sleep-state advisory (Virtual Control Plane must be awake to snapshot)</li>
+</ol>
+
+<!-- ============== unstick ============== -->
+<h2 id="cmd-unstick">unstick</h2>
+<p class="lead">Stuck-state recovery toolkit. Run when an upgrade has stalled.</p>
+<pre><code># Report only (read-only, default)
+kubectl upgrade unstick
+
+# Apply the safe class of fixes (uncordon nodes only)
+kubectl upgrade unstick --auto-fix --execute</code></pre>
+<p>Detects:</p>
+<ul>
+  <li>Cordoned nodes left over post-drain</li>
+  <li>NotReady nodes (CNI / kubelet)</li>
+  <li>Pods stuck Terminating or Pending past <code>--stuck-min</code> minutes</li>
+  <li>Operator Pods in CrashLoopBackoff (cert-manager, ArgoCD, Karpenter, …)</li>
+  <li>PDB-blocked evictions in recent events</li>
+  <li>Webhooks with <code>failurePolicy=Fail</code> (deadlock risk)</li>
+  <li>Namespaces stuck Terminating (finalizer deadlock)</li>
+</ul>
+<p><code>--auto-fix --execute</code> only applies <strong>safe</strong> fixes — uncordoning nodes is the only one in v0.1. Risky fixes (force-delete pods, patch webhooks, remove namespace finalizers) emit the command for you to run.</p>
+
+<!-- ============== plan ============== -->
+<h2 id="cmd-plan">plan</h2>
+<p class="lead">Chained one-minor-at-a-time upgrade path.</p>
+<pre><code>kubectl upgrade plan --from v1.30 --to v1.34</code></pre>
+<div class="term">Chained upgrade plan: v1.30 → v1.31 → v1.32 → v1.33 → v1.34
+Hops: 4
+
+Per-hop checklist:
+  1. Take a fresh etcd snapshot / Velero backup.
+  2. Run `upgrade scan --target &lt;next-hop&gt;`. Resolve all BLOCKERS.
+  3. Run `upgrade addons --target &lt;next-hop&gt;`. Bump incompatible operators FIRST.
+  4. Run `upgrade pdb`. Fix ALLOWED DISRUPTIONS == 0 PDBs.
+  5. Pause GitOps reconciliation (ArgoCD auto-sync, Flux suspend).
+  6. Upgrade control plane.
+  7. Upgrade nodes (rolling, max-surge ≥ 1).
+  8. Verify workloads, resume GitOps, re-snapshot as new baseline.</div>
+
+<!-- ============== report ============== -->
+<h2 id="cmd-report">report</h2>
+<p class="lead">Aggregated combined report. Same shape as <code>preflight</code>, but adds a chosen output format and fail-on gate.</p>
+<pre><code>kubectl upgrade report --target v1.34 --format md -o upgrade-readiness.md</code></pre>
+
+<!-- ============== tui ============== -->
+<h2 id="cmd-tui">tui</h2>
+<p class="lead">Interactive visual upgrade dashboard (bubbletea).</p>
+<pre><code>kubectl upgrade tui --target v1.34</code></pre>
+<p>Side-by-side dashboard with steps on the left, per-step details / findings / commands on the right.</p>
+<table>
+  <tr><th>Key</th><th>Action</th></tr>
+  <tr><td><code>↑ / k</code> · <code>↓ / j</code></td><td>Navigate steps</td></tr>
+  <tr><td><code>enter</code> · <code>r</code></td><td>Run the highlighted step (read-only)</td></tr>
+  <tr><td><code>q</code> · <code>esc</code></td><td>Quit</td></tr>
+</table>
+
+<!-- ============== CI ============== -->
+<h2 id="ci">CI / CD recipe</h2>
+<p class="lead">Gate every PR on a clean preflight against a target version.</p>
+<h3>GitHub Actions</h3>
+<pre><code>name: K8s upgrade pre-flight
+on:
+  pull_request:
+    paths: ['**/*.yaml', '**/*.yml']
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kubectl-upgrade
+        run: |
+          curl -sSL https://raw.githubusercontent.com/saiyam1814/upgrade/main/install.sh | sh
+      - name: Scan manifests for deprecated APIs
+        run: |
+          kubectl-upgrade scan \
+            --target v1.34 \
+            --source manifests --path ./k8s/ \
+            --fail-on blocker \
+            --format sarif -o upgrade.sarif
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: upgrade.sarif</code></pre>
+<p>For full pre-flight against the live cluster (e.g. a nightly job):</p>
+<pre><code>      - name: Live preflight
+        run: |
+          kubectl-upgrade preflight \
+            --target v1.34 \
+            --fail-on high \
+            --format md -o readiness.md</code></pre>
+
+<h3>GitLab / generic</h3>
+<pre><code># Anywhere with kubectl access:
+kubectl-upgrade preflight --target v1.34 --fail-on blocker</code></pre>
+<p>Exit codes: <code>0</code> = clean, <code>2</code> = at least one finding ≥ <code>--fail-on</code>.</p>
+
+<!-- ============== findings ============== -->
+<h2 id="findings">Finding severities</h2>
+<table>
+  <tr><th>Severity</th><th>Meaning</th><th>Action</th></tr>
+  <tr><td><strong style="color:#ef4444">BLOCKER</strong></td><td>Will fail the upgrade.</td><td>Must fix before bumping.</td></tr>
+  <tr><td><strong style="color:#fbbf24">HIGH</strong></td><td>Likely to fail or cause downtime.</td><td>Fix before upgrade in production.</td></tr>
+  <tr><td><strong style="color:#06b6d4">MEDIUM</strong></td><td>May cause issues. Worth reviewing.</td><td>Review; fix if applicable.</td></tr>
+  <tr><td><strong>LOW</strong></td><td>Cleanup / hygiene.</td><td>Non-blocking.</td></tr>
+  <tr><td><strong>INFO</strong></td><td>Informational only (e.g. discovered Tenant Cluster).</td><td>None.</td></tr>
+</table>
+
+<!-- ============== safety ============== -->
+<h2 id="safety">Safety contract</h2>
+<p>Every command is read-only by default. The single mutating path (<code>unstick --auto-fix</code>) requires both <code>--execute</code> and a per-action <code>[y/N]</code> confirm. The full safety contract is at <a href="https://github.com/saiyam1814/upgrade/blob/main/SAFETY.md">SAFETY.md</a>.</p>
+<div class="note">kubectl-upgrade NEVER runs cloud CLIs (aws / gcloud / az / talosctl / kubeadm) for you. It emits the exact command. You execute. The blast radius of a control-plane upgrade is yours, not ours.</div>
+
+</main>
+</div>
+
+<footer>
+  <div class="container">
+    <p>Apache 2.0 · Built by <a href="https://github.com/saiyam1814">Saiyam Pathak</a> · <a href="https://github.com/saiyam1814/upgrade">GitHub</a> · <a href="https://github.com/saiyam1814/upgrade/blob/main/SAFETY.md">Safety</a></p>
+  </div>
+</footer>
+</body>
+</html>
