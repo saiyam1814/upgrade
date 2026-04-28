@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+        cache: true
+    - name: Vet
+      run: go vet ./...
+    - name: Format check
+      run: |
+        if [ -n "$(gofmt -l .)" ]; then
+          echo "gofmt issues:"
+          gofmt -l .
+          exit 1
+        fi
+    - name: Tests
+      run: go test -race -count=1 ./...
+    - name: Build
+      run: go build -o bin/kubectl-upgrade .
+    - name: Smoke
+      run: |
+        ./bin/kubectl-upgrade version
+        ./bin/kubectl-upgrade plan --from v1.30 --to v1.34
+        ./bin/kubectl-upgrade simulate --from v1.30 --to v1.34
+        ./bin/kubectl-upgrade vcluster --explain
+        ./bin/kubectl-upgrade scan --target v1.33 --source manifests --path testdata/manifests/ --fail-on none
+
+  golangci-lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+    - uses: golangci/golangci-lint-action@v6
+      with:
+        version: latest
+        args: --timeout=5m

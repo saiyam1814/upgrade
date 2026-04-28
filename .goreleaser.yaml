@@ -1,0 +1,103 @@
+version: 2
+project_name: kubectl-upgrade
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: kubectl-upgrade
+    main: .
+    binary: kubectl-upgrade
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/saiyam1814/upgrade/internal/cmd.version={{.Version}}
+      - -X github.com/saiyam1814/upgrade/internal/cmd.commit={{.ShortCommit}}
+      - -X github.com/saiyam1814/upgrade/internal/cmd.dataDate={{.Date}}
+
+archives:
+  - id: default
+    name_template: >-
+      {{ .ProjectName }}_{{ .Os }}_{{ .Arch }}
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - README.md
+      - SAFETY.md
+
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - 'merge conflict'
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: Bug fixes
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: Other
+      order: 999
+
+brews:
+  - name: kubectl-upgrade
+    repository:
+      owner: saiyam1814
+      name: homebrew-tap
+    homepage: https://github.com/saiyam1814/upgrade
+    description: "Pre-flight, watch, and verify any Kubernetes upgrade safely"
+    license: Apache-2.0
+    install: |
+      bin.install "kubectl-upgrade"
+    test: |
+      system "#{bin}/kubectl-upgrade", "version"
+
+release:
+  github:
+    owner: saiyam1814
+    name: upgrade
+  draft: false
+  prerelease: auto
+  header: |
+    ## kubectl-upgrade {{ .Tag }}
+
+    Pre-flight, watch, and verify any Kubernetes upgrade safely.
+
+    See [SAFETY.md](https://github.com/saiyam1814/upgrade/blob/main/SAFETY.md) for the safety contract.
+  footer: |
+    ### Install
+
+    ```bash
+    # via krew
+    kubectl krew install upgrade
+
+    # via brew
+    brew install saiyam1814/tap/kubectl-upgrade
+
+    # via curl (linux/macos)
+    curl -sSL https://raw.githubusercontent.com/saiyam1814/upgrade/main/install.sh | sh
+    ```

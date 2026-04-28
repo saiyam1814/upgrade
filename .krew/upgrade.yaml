@@ -1,0 +1,92 @@
+apiVersion: krew.googlecontainertools.github.com/v1alpha2
+kind: Plugin
+metadata:
+  name: upgrade
+spec:
+  version: "v0.1.0"
+  homepage: https://github.com/saiyam1814/upgrade
+  shortDescription: Pre-flight, watch, and verify any Kubernetes upgrade safely
+  description: |
+    kubectl-upgrade is the missing pre-flight + watch + verify layer
+    that wraps any Kubernetes upgrade. It tells you what will break
+    before you start (across Git, Helm, CRDs, webhooks, PVCs, operators,
+    PDBs that no managed provider catches), generates the exact
+    provider-specific upgrade commands for you to run, watches the
+    upgrade in progress (catching stuck PDBs, stalled CRD migrations,
+    addon dependency cycles), tells you how to unstick it, and verifies
+    success after.
+
+    It does not run cloud CLIs itself — it makes them safe to run.
+
+    Three top-level flows:
+      preflight  scan + simulate + addons + pdb + volumes + vcluster
+      run        emit cloud CLI command + watch + verify
+      fleet      vCluster Tenant Cluster fleet upgrade wave
+
+    Plus toolkit commands: scan, simulate, pdb, addons, volumes,
+    vcluster, unstick, plan, report, tui.
+  caveats: |
+    Every command is read-only by default. Mutating actions require
+    explicit --execute and per-action confirmation. See SAFETY.md
+    in the repo.
+  platforms:
+  - selector:
+      matchLabels:
+        os: linux
+        arch: amd64
+    uri: https://github.com/saiyam1814/upgrade/releases/download/v0.1.0/kubectl-upgrade_linux_amd64.tar.gz
+    sha256: REPLACE_AT_RELEASE
+    bin: kubectl-upgrade
+    files:
+    - from: kubectl-upgrade
+      to: .
+    - from: LICENSE
+      to: .
+  - selector:
+      matchLabels:
+        os: linux
+        arch: arm64
+    uri: https://github.com/saiyam1814/upgrade/releases/download/v0.1.0/kubectl-upgrade_linux_arm64.tar.gz
+    sha256: REPLACE_AT_RELEASE
+    bin: kubectl-upgrade
+    files:
+    - from: kubectl-upgrade
+      to: .
+    - from: LICENSE
+      to: .
+  - selector:
+      matchLabels:
+        os: darwin
+        arch: amd64
+    uri: https://github.com/saiyam1814/upgrade/releases/download/v0.1.0/kubectl-upgrade_darwin_amd64.tar.gz
+    sha256: REPLACE_AT_RELEASE
+    bin: kubectl-upgrade
+    files:
+    - from: kubectl-upgrade
+      to: .
+    - from: LICENSE
+      to: .
+  - selector:
+      matchLabels:
+        os: darwin
+        arch: arm64
+    uri: https://github.com/saiyam1814/upgrade/releases/download/v0.1.0/kubectl-upgrade_darwin_arm64.tar.gz
+    sha256: REPLACE_AT_RELEASE
+    bin: kubectl-upgrade
+    files:
+    - from: kubectl-upgrade
+      to: .
+    - from: LICENSE
+      to: .
+  - selector:
+      matchLabels:
+        os: windows
+        arch: amd64
+    uri: https://github.com/saiyam1814/upgrade/releases/download/v0.1.0/kubectl-upgrade_windows_amd64.zip
+    sha256: REPLACE_AT_RELEASE
+    bin: kubectl-upgrade.exe
+    files:
+    - from: kubectl-upgrade.exe
+      to: .
+    - from: LICENSE
+      to: .

@@ -1,0 +1,75 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: nightly-backup
+  namespace: ops
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: backup:latest
+          restartPolicy: OnFailure
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: legacy-pdb
+  namespace: ops
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: legacy
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api-hpa
+  namespace: api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+---
+apiVersion: flowcontrol.apiserver.k8s.io/v1beta3
+kind: FlowSchema
+metadata:
+  name: my-flow
+spec:
+  priorityLevelConfiguration:
+    name: my-priority
+  matchingPrecedence: 1000
+  rules: []
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: modern-app
+  namespace: prod
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: modern-app
+  template:
+    metadata:
+      labels:
+        app: modern-app
+    spec:
+      containers:
+      - name: app
+        image: nginx:1.27
