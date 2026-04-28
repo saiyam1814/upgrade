@@ -63,18 +63,11 @@ changelog:
     - title: Other
       order: 999
 
-brews:
-  - name: kubectl-upgrade
-    repository:
-      owner: saiyam1814
-      name: homebrew-tap
-    homepage: https://github.com/saiyam1814/upgrade
-    description: "Pre-flight, watch, and verify any Kubernetes upgrade safely"
-    license: Apache-2.0
-    install: |
-      bin.install "kubectl-upgrade"
-    test: |
-      system "#{bin}/kubectl-upgrade", "version"
+# Homebrew formula publication is deferred until saiyam1814/homebrew-tap
+# exists and HOMEBREW_TAP_GITHUB_TOKEN is configured on this repo. To
+# enable: create the tap repo, add a PAT with write access as that
+# secret, then re-add a `brews:` stanza pointing at owner+name with the
+# install/test blocks.
 
 release:
   github:
