@@ -7,7 +7,9 @@
 <meta name="description" content="Pre-flight, run, watch, unstick, verify any Kubernetes upgrade safely. Provider-agnostic. vCluster fleet aware. Read-only by default.">
 <meta property="og:title" content="kubectl-upgrade">
 <meta property="og:description" content="The conductor for any Kubernetes upgrade — managed, self-managed, vCluster fleet.">
-<meta property="og:image" content="https://saiyam1814.github.io/upgrade/logo.svg">
+<meta property="og:image" content="https://saiyam1814.github.io/upgrade/screenshots/fleet-drift.png">
+<meta property="og:image:width" content="1100">
+<meta property="og:image:height" content="600">
 <meta name="twitter:card" content="summary">
 <link rel="icon" href="logo.svg" type="image/svg+xml">
 <style>
@@ -291,6 +293,27 @@ footer a { color: var(--accent); text-decoration: none; }
     <div class="step"><span class="num">5</span><h4>run verify</h4><p>server version + rescan</p></div>
   </div>
   <p class="dim" style="margin-top:1rem;font-size:0.9rem">Optional: <code>kubectl upgrade fleet --plan</code> for vCluster Tenant Cluster waves after a Control Plane Cluster bump.</p>
+
+<h2 style="margin-top:3rem">Real output, real cluster</h2>
+<p class="lead">Screenshots from a live test cluster (vind + 2 vCluster Tenant Clusters + cert-manager + a planted broken PDB). Every command shown is in the shipped binary today.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0">
+  <figure style="margin:0">
+    <img src="screenshots/fleet-drift.png" alt="kubectl upgrade fleet drift output" style="width:100%;border-radius:8px;border:1px solid var(--border)">
+    <figcaption class="dim" style="font-size:0.85rem;margin-top:0.4rem">fleet drift — version distribution + top issues</figcaption>
+  </figure>
+  <figure style="margin:0">
+    <img src="screenshots/preflight.png" alt="kubectl upgrade preflight output" style="width:100%;border-radius:8px;border:1px solid var(--border)">
+    <figcaption class="dim" style="font-size:0.85rem;margin-top:0.4rem">preflight — full pre-upgrade audit</figcaption>
+  </figure>
+  <figure style="margin:0">
+    <img src="screenshots/vcluster-explain.png" alt="kubectl upgrade vcluster --explain decision tree" style="width:100%;border-radius:8px;border:1px solid var(--border)">
+    <figcaption class="dim" style="font-size:0.85rem;margin-top:0.4rem">vcluster --explain — 8-gate decision tree</figcaption>
+  </figure>
+  <figure style="margin:0">
+    <img src="screenshots/tui.png" alt="kubectl upgrade tui — bubbletea dashboard" style="width:100%;border-radius:8px;border:1px solid var(--border)">
+    <figcaption class="dim" style="font-size:0.85rem;margin-top:0.4rem">tui — bubbletea step-by-step dashboard</figcaption>
+  </figure>
+</div>
 
 <h2 style="margin-top:3rem">What it actually looks like</h2>
 <div class="term"><span class="cyn">▎ Preflight</span>
