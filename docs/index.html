@@ -150,6 +150,12 @@ table th, table td {
 }
 table th { color: var(--muted); font-weight: 600; }
 
+/* Table links — default browser blue is unreadable on dark bg.
+   Force accent color on linked code cells. */
+table a, table a:visited { color: var(--accent); text-decoration: none; }
+table a:hover { color: #67e8f9; text-decoration: underline; }
+table a code { color: var(--accent); background: var(--code-bg); }
+
 .tabs { display: flex; gap: 0.5rem; margin: 1rem 0 0.5rem; flex-wrap: wrap; }
 .tab {
   padding: 0.4rem 0.9rem;
