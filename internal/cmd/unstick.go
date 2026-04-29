@@ -33,9 +33,11 @@ type unstickOpts struct {
 func newUnstickCmd() *cobra.Command {
 	o := &unstickOpts{}
 	cmd := &cobra.Command{
-		Use:   "unstick",
-		Short: "Detect and remediate a stuck Kubernetes upgrade",
-		Long: `unstick walks the cluster for the canonical "stuck upgrade" patterns:
+		Use:     "unstick",
+		Aliases: []string{"doctor"},
+		Short:   "Diagnose and remediate stuck cluster state (alias: doctor)",
+		Long: `unstick (alias: doctor) walks the cluster for canonical "stuck" patterns
+that block upgrades AND general cluster health issues:
 
   - Cordoned nodes left over post-drain
   - NotReady nodes (CNI / kubelet)
@@ -43,6 +45,7 @@ func newUnstickCmd() *cobra.Command {
   - Operator Pods in CrashLoopBackoff
   - PDB-blocked evictions in recent events
   - Webhooks with failurePolicy=Fail (deadlock risk)
+  - Helm releases stuck pending-upgrade (one stuck release halts a fleet wave)
   - Namespaces stuck Terminating (finalizer deadlock)
 
 By default this is read-only — it tells you what's stuck and the
