@@ -7,14 +7,15 @@
 // Patterns implemented:
 //
 //  1. Cordoned nodes left over post-upgrade  (drain not uncordoned)
-//  2. Pods stuck Terminating > 5 minutes      (finalizer / volume detach)
-//  3. Pods stuck Pending > 5 minutes          (scheduler / PDB / quota)
-//  4. PDB-blocked drains                      (Cannot evict events)
-//  5. CrashLoopBackoff in critical operators  (cert-manager, argocd, etc.)
-//  6. NotReady nodes                          (CNI / kubelet)
-//  7. CRDs in NotEstablished state            (storage migration stuck)
-//  8. Webhooks with failurePolicy=Fail        (potential deadlock during upgrade churn)
-//  9. Stuck namespaces (Terminating)          (finalizer deadlock)
+//  2. Pods stuck Terminating > 5 minutes     (finalizer / volume detach)
+//  3. Pods stuck Pending > 5 minutes         (scheduler / PDB / quota)
+//  4. PDB-blocked drains                     (Cannot evict events)
+//  5. CrashLoopBackoff in critical operators (cert-manager, argocd, etc.)
+//  6. NotReady nodes                         (CNI / kubelet)
+//  7. CRDs in NotEstablished state           (storage migration stuck)
+//  8. Webhooks with failurePolicy=Fail       (potential deadlock during upgrade churn)
+//  9. Stuck namespaces (Terminating)         (finalizer deadlock)
+//  10. Helm releases stuck "pending-upgrade"  (one stuck release halts whole fleet wave)
 //
 // Auto-fix scope: only the safe class.
 //   - Uncordon nodes (always reversible)
@@ -82,6 +83,11 @@ func Analyze(ctx context.Context, core kubernetes.Interface, opts Options) ([]fi
 		out = append(out, f...)
 	}
 	if f, e := detectFailWebhooks(ctx, core); e != nil {
+		errs = append(errs, e)
+	} else {
+		out = append(out, f...)
+	}
+	if f, e := detectStuckHelmReleases(ctx, core); e != nil {
 		errs = append(errs, e)
 	} else {
 		out = append(out, f...)
@@ -333,6 +339,46 @@ func detectTerminatingNamespaces(ctx context.Context, core kubernetes.Interface)
 			Source:   finding.Source{Kind: "live", Location: "v1/namespaces/" + ns.Name},
 			Object:   &finding.Object{APIVersion: "v1", Kind: "Namespace", Name: ns.Name},
 			Fix:      fmt.Sprintf("kubectl get apiservice | grep False     # find unavailable APIService\nkubectl get %s -A 2>&1 | head     # find dangling CRs blocking finalizer", "<crd>"),
+		})
+	}
+	return out, nil
+}
+
+//  8. Helm releases stuck "pending-upgrade" — one stuck release halts a fleet wave.
+//     Detection: helm v3 stores the release status in a label called "status" on
+//     the Secret. Values "pending-upgrade" / "pending-install" / "pending-rollback"
+//     are the stuck classes; the user must delete the offending revision Secret
+//     to unblock subsequent helm operations.
+func detectStuckHelmReleases(ctx context.Context, core kubernetes.Interface) ([]finding.Finding, error) {
+	secrets, err := core.CoreV1().Secrets("").List(ctx, metav1.ListOptions{LabelSelector: "owner=helm"})
+	if err != nil {
+		if apierrors.IsForbidden(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("list helm secrets: %w", err)
+	}
+	var out []finding.Finding
+	for _, s := range secrets.Items {
+		if s.Type != "helm.sh/release.v1" {
+			continue
+		}
+		status := s.Labels["status"]
+		switch status {
+		case "pending-upgrade", "pending-install", "pending-rollback":
+		default:
+			continue
+		}
+		relName := s.Labels["name"]
+		rev := s.Labels["version"]
+		out = append(out, finding.Finding{
+			Severity: finding.Blocker,
+			Category: finding.CategoryAddon,
+			Title:    fmt.Sprintf("Helm release %s/%s rev %s stuck in %q", s.Namespace, relName, rev, status),
+			Detail:   "A pending-upgrade revision blocks all subsequent helm operations on this release. Common after Ctrl-C during 'helm upgrade' or pod-eviction mid-upgrade.",
+			Source:   finding.Source{Kind: "live", Location: fmt.Sprintf("v1/secrets/%s/%s", s.Namespace, s.Name)},
+			Object:   &finding.Object{APIVersion: "v1", Kind: "Secret", Namespace: s.Namespace, Name: s.Name},
+			Fix:      fmt.Sprintf("kubectl delete secret %s -n %s   # then re-run your helm upgrade", s.Name, s.Namespace),
+			Docs:     []string{"https://github.com/helm/helm/issues/8987"},
 		})
 	}
 	return out, nil

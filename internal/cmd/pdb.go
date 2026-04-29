@@ -9,6 +9,7 @@ import (
 
 	"github.com/saiyam1814/upgrade/internal/finding"
 	"github.com/saiyam1814/upgrade/internal/pdb"
+	"github.com/saiyam1814/upgrade/internal/recommend"
 	"github.com/saiyam1814/upgrade/internal/report"
 	"github.com/saiyam1814/upgrade/internal/sources/live"
 )
@@ -69,5 +70,6 @@ func runPDB(ctx context.Context, o *pdbOpts) error {
 	if err := report.Render(os.Stdout, header, findings, format); err != nil {
 		return err
 	}
+	emitRecommendation(format, recommend.Context{Command: "pdb", Findings: findings})
 	return failOnExit(findings, o.failOn)
 }

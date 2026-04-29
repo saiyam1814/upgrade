@@ -9,6 +9,7 @@ import (
 
 	"github.com/saiyam1814/upgrade/internal/addons"
 	"github.com/saiyam1814/upgrade/internal/finding"
+	"github.com/saiyam1814/upgrade/internal/recommend"
 	"github.com/saiyam1814/upgrade/internal/report"
 	"github.com/saiyam1814/upgrade/internal/rules/apis"
 	"github.com/saiyam1814/upgrade/internal/sources/live"
@@ -77,5 +78,10 @@ func runAddons(ctx context.Context, o *addonsOpts) error {
 	if err := report.Render(os.Stdout, header, findings, format); err != nil {
 		return err
 	}
+	emitRecommendation(format, recommend.Context{
+		Command:  "addons",
+		Target:   target.String(),
+		Findings: findings,
+	})
 	return failOnExit(findings, o.failOn)
 }

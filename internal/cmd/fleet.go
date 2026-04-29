@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/saiyam1814/upgrade/internal/finding"
+	"github.com/saiyam1814/upgrade/internal/recommend"
+	"github.com/saiyam1814/upgrade/internal/report"
 	"github.com/saiyam1814/upgrade/internal/rules/apis"
 	"github.com/saiyam1814/upgrade/internal/sources/live"
 	"github.com/saiyam1814/upgrade/internal/ui"
@@ -28,6 +30,7 @@ func newFleetCmd() *cobra.Command {
 	o := &fleetOpts{}
 	cmd := &cobra.Command{
 		Use:   "fleet",
+		Args:  cobra.NoArgs,
 		Short: "vCluster Tenant Cluster fleet upgrade — discover all, plan a safe wave",
 		Long: `fleet discovers every vCluster Tenant Cluster on this Control Plane
 Cluster, evaluates each against your host-target / vcluster-target,
@@ -64,6 +67,7 @@ Use --plan to print a per-tenant runbook ready for ops review.`,
 	cmd.Flags().StringVar(&o.contextName, "context", "", "Kubeconfig context name")
 	cmd.Flags().BoolVar(&o.plan, "plan", false, "Emit a per-tenant runbook")
 	cmd.Flags().IntVar(&o.parallel, "parallel", 1, "Concurrency hint for the wave (default 1: sequential)")
+	cmd.AddCommand(newFleetDriftCmd())
 	return cmd
 }
 
@@ -190,7 +194,30 @@ func runFleet(ctx context.Context, o *fleetOpts) error {
 	}
 	ui.Hr(os.Stdout)
 	fmt.Println(ui.Dim("Reminder: kubectl-upgrade NEVER mutates. You execute each step."))
+
+	// Aggregated findings + recommendation.
+	all := []finding.Finding{}
+	for _, e := range entries {
+		all = append(all, e.Findings...)
+	}
+	hostT := ""
+	if hostTarget != nil {
+		hostT = hostTarget.String()
+	}
+	emitRecommendation(report.FormatHuman, recommend.Context{
+		Command:     "fleet",
+		Target:      strOr(hostT, fmt.Sprintf("%v", vcTarget)),
+		Findings:    all,
+		HasVCluster: true,
+	})
 	return nil
+}
+
+func strOr(a, b string) string {
+	if a != "" {
+		return a
+	}
+	return b
 }
 
 // scoreTenant produces the wave-ordering key.

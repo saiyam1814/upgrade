@@ -6,6 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/saiyam1814/upgrade/internal/recommend"
+	"github.com/saiyam1814/upgrade/internal/report"
 	"github.com/saiyam1814/upgrade/internal/rules/apis"
 )
 
@@ -73,5 +75,6 @@ func runPlan(o *planOpts) error {
 	fmt.Println("Tip: run `upgrade scan --target", to, "` once first to surface")
 	fmt.Println("     deprecations that span the whole chain — fixing them up-front")
 	fmt.Println("     amortizes the work across hops.")
+	emitRecommendation(report.FormatHuman, recommend.Context{Command: "plan", Target: to.String()})
 	return nil
 }

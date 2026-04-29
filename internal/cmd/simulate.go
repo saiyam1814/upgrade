@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/saiyam1814/upgrade/internal/finding"
+	"github.com/saiyam1814/upgrade/internal/recommend"
 	"github.com/saiyam1814/upgrade/internal/report"
 	"github.com/saiyam1814/upgrade/internal/rules/apis"
 	"github.com/saiyam1814/upgrade/internal/rules/featuregates"
@@ -71,5 +72,13 @@ func runSimulate(o *simulateOpts) error {
 		Source:      "simulate",
 		Target:      to.String(),
 	}
-	return report.Render(os.Stdout, header, findings, format)
+	if err := report.Render(os.Stdout, header, findings, format); err != nil {
+		return err
+	}
+	emitRecommendation(format, recommend.Context{
+		Command:  "simulate",
+		Target:   to.String(),
+		Findings: findings,
+	})
+	return nil
 }

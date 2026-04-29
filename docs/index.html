@@ -253,8 +253,18 @@ footer a { color: var(--accent); text-decoration: none; }
     </div>
     <div class="card">
       <span class="icon">🌐</span>
-      <h3>vCluster fleet</h3>
-      <p>Bumping the host? <code>fleet --host-target v1.34</code> checks every tenant's vCluster version against a host-K8s compat matrix and tells you which tenants must bump first.</p>
+      <h3>Multi-cluster · fleet drift</h3>
+      <p><code>preflight --all-contexts</code> fans out across 50 clusters in parallel. <code>fleet drift</code> shows the K8s version distribution and top issues across the whole fleet.</p>
+    </div>
+    <div class="card">
+      <span class="icon">🪡</span>
+      <h3>vCluster-aware</h3>
+      <p>Bumping a host? <code>fleet --host-target v1.34</code> checks every Tenant Cluster's vCluster version against a host-K8s compat matrix and tells you which tenants must bump first.</p>
+    </div>
+    <div class="card">
+      <span class="icon">🧭</span>
+      <h3>Smart "next:" hints</h3>
+      <p>Every command ends with a one-line <code>→ Next:</code> recommendation: which command to run, which finding to fix first, what to chain.</p>
     </div>
     <div class="card">
       <span class="icon">⚡</span>
@@ -348,11 +358,42 @@ kubectl-upgrade --help</code></pre></div>
     <tr><td><a href="usage.html#cmd-plan"><code>plan</code></a></td><td>Chained one-minor-at-a-time path</td></tr>
     <tr><td><a href="usage.html#cmd-report"><code>report</code></a></td><td>Combined report (human / JSON / Markdown / SARIF)</td></tr>
     <tr><td><a href="usage.html#cmd-tui"><code>tui</code></a></td><td>Interactive visual upgrade dashboard</td></tr>
+    <tr><td><a href="usage.html#cmd-drift"><code>fleet drift</code></a></td><td>Multi-cluster K8s version distribution + top issues</td></tr>
   </table>
 </section>
 
+<section id="multi-cluster" class="container">
+  <h2>Multi-cluster · 50 clusters in 8 minutes</h2>
+  <p class="lead">Pre-flight a whole fleet from one command. Per-cluster RBAC scoping, per-cluster timeouts, parallel fan-out — a slow cluster never blocks the rest.</p>
+  <pre><code># Fan out across every kubeconfig context
+kubectl upgrade preflight --target v1.34 --all-contexts --parallel 10
+
+# Specific clusters
+kubectl upgrade preflight --target v1.34 --contexts prod-east,prod-west,staging
+
+# Fleet drift: K8s version distribution + top issues across the fleet
+kubectl upgrade fleet drift --target v1.34 --all-contexts</code></pre>
+  <div class="term"><span class="cyn">▎ Fleet drift</span>
+<span class="gry">  50 clusters · target v1.34</span>
+
+Aggregate findings: <span class="red">5 BLOCKER</span> · <span class="yel">9 HIGH</span> · <span class="cyn">23 MEDIUM</span>
+
+<span style="font-weight:bold">K8s version distribution:</span>
+  v1.31   <span class="cyn">████████████████████████████</span>  42 (84%)
+  v1.30   <span class="cyn">███</span>                            5 (10%)
+  v1.29   <span class="cyn">██</span>                             3 ( 6%)
+
+<span style="font-weight:bold">Top issues across the fleet:</span>
+   18 cluster(s)  BLOCKER: policy/v1beta1/PodDisruptionBudget removed in v1.25
+   12 cluster(s)  HIGH: cgroup v1 deprecated in kubelet
+    7 cluster(s)  HIGH: cert-manager v1.13 (incompatible target)
+
+<span class="mag">→ Next: Outlier clusters detected. Run preflight on the laggards:</span>
+<span class="mag">         kubectl upgrade preflight --target v1.34 --contexts prod-east-3,prod-west-7</span></div>
+</section>
+
 <section id="fleet" class="container">
-  <h2>Fleet — host × vCluster compat</h2>
+  <h2>vCluster fleet — host × vCluster compat</h2>
   <p class="lead">When you bump a Control Plane Cluster's K8s version, not every vCluster on it tolerates the new host. <code>fleet</code> checks every tenant against a curated compat matrix and tells you which tenants must bump first.</p>
   <pre><code>$ kubectl upgrade fleet --host-target v1.34 --plan</code></pre>
   <table>

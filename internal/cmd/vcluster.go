@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/saiyam1814/upgrade/internal/finding"
+	"github.com/saiyam1814/upgrade/internal/recommend"
 	"github.com/saiyam1814/upgrade/internal/report"
 	"github.com/saiyam1814/upgrade/internal/rules/apis"
 	"github.com/saiyam1814/upgrade/internal/sources/live"
@@ -108,5 +109,14 @@ func runVCluster(ctx context.Context, o *vclusterOpts) error {
 	if err := report.Render(os.Stdout, header, findings, format); err != nil {
 		return err
 	}
+	tgt := ""
+	if target != nil {
+		tgt = target.String()
+	}
+	emitRecommendation(format, recommend.Context{
+		Command:  "vcluster",
+		Target:   tgt,
+		Findings: findings,
+	})
 	return failOnExit(findings, o.failOn)
 }

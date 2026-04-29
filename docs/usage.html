@@ -123,8 +123,9 @@ footer a { color: var(--accent); text-decoration: none; }
   <h3>Commands</h3>
   <ul>
     <li><a href="#cmd-preflight">preflight</a></li>
+    <li><a href="#cmd-drift">fleet drift</a></li>
     <li><a href="#cmd-run">run plan / watch / verify</a></li>
-    <li><a href="#cmd-fleet">fleet</a></li>
+    <li><a href="#cmd-fleet">fleet (vCluster)</a></li>
     <li><a href="#cmd-scan">scan</a></li>
     <li><a href="#cmd-simulate">simulate</a></li>
     <li><a href="#cmd-pdb">pdb</a></li>
@@ -187,6 +188,27 @@ kubectl upgrade run verify --target v1.34</code></pre>
   <tr><td><code>--format sarif</code></td><td>Upload to GitHub code scanning / GitLab Code Quality.</td></tr>
 </table>
 
+<h2 id="multi-cluster">Multi-cluster mode</h2>
+<p class="lead">Every command that talks to a live cluster also accepts <code>--contexts</code> or <code>--all-contexts</code> for parallel fan-out. The fan-out is bounded by <code>--parallel</code> (default 8) and each cluster has a <code>--timeout</code> (default 90s) so a slow cluster never blocks the rest.</p>
+<pre><code># Fan out preflight across many clusters
+kubectl upgrade preflight --target v1.34 --contexts prod-east,prod-west,staging
+kubectl upgrade preflight --target v1.34 --all-contexts --parallel 10
+kubectl upgrade preflight --target v1.34 --all-contexts --exclude sandbox,scratch</code></pre>
+<p>RBAC: each context uses its own kubeconfig identity, so a context that can only see one namespace contributes only that namespace's findings. No cross-cluster privilege leakage.</p>
+
+<h2 id="recommendations">Smart "next:" recommendations</h2>
+<p class="lead">Every command ends with a one-line <code>→ Next:</code> suggestion in human-format output. The recommendation depends on what the command found.</p>
+<table>
+  <tr><th>Command result</th><th>Recommendation</th></tr>
+  <tr><td>preflight clean</td><td>Next: <code>kubectl upgrade run plan --target …</code></td></tr>
+  <tr><td>preflight with PDB BLOCKER</td><td>"PDB will deadlock drain. Run kubectl upgrade unstick or fix the PDB directly."</td></tr>
+  <tr><td>preflight with API BLOCKER</td><td>"Run kubectl-convert on offending manifests, then re-run preflight."</td></tr>
+  <tr><td>scan with deprecated APIs</td><td>"Fix the deprecated apiVersions, then re-run scan."</td></tr>
+  <tr><td>run plan on GKE/EKS/AKS</td><td>"In a separate terminal: kubectl upgrade run watch"</td></tr>
+  <tr><td>run watch settled</td><td>"Run kubectl upgrade run verify --target …"</td></tr>
+  <tr><td>fleet drift with outliers</td><td>"Run preflight on the laggards: kubectl upgrade preflight --contexts &lt;outlier1,outlier2&gt;"</td></tr>
+</table>
+
 <!-- ============== preflight ============== -->
 <h2 id="cmd-preflight">preflight</h2>
 <p class="lead">The day-1 entry point. Runs every workload-side safety check and produces one combined report.</p>
@@ -220,6 +242,42 @@ BLOCKERS
 HIGH
   <span class="yel">⚠</span> [v1.31] cgroup v1 support deprecated in kubelet</div>
 <p><strong>Useful flags:</strong> <code>--skip-vcluster</code>, <code>--fail-on blocker</code>.</p>
+
+<!-- ============== fleet drift ============== -->
+<h2 id="cmd-drift">fleet drift</h2>
+<p class="lead">The headline ops command for a Platform Engineering lead. Fans out across many contexts in parallel and shows the K8s version distribution + top issues across the entire fleet — so you walk into the change-window meeting with the number that matters.</p>
+<pre><code># All contexts in your kubeconfig
+kubectl upgrade fleet drift --target v1.34
+
+# Specific clusters
+kubectl upgrade fleet drift --target v1.34 --contexts prod-east,prod-west
+
+# Big fleet, more parallelism
+kubectl upgrade fleet drift --target v1.34 --all-contexts --parallel 20 --timeout 120
+
+# Exclude sandbox/dev
+kubectl upgrade fleet drift --target v1.34 --all-contexts --exclude sandbox</code></pre>
+<div class="term"><span class="cyn">▎ Fleet drift</span>
+<span class="gry">  50 clusters · target v1.34</span>
+
+Aggregate findings: <span class="red">5 BLOCKER</span> · <span class="yel">9 HIGH</span> · <span class="cyn">23 MEDIUM</span>
+
+<span style="font-weight:bold">K8s version distribution:</span>
+  v1.31   <span class="cyn">████████████████████████████</span>  42 (84%)
+  v1.30   <span class="cyn">███</span>                             5 (10%)
+  v1.29   <span class="cyn">██</span>                              3 ( 6%)
+
+<span style="font-weight:bold">Per-cluster:</span>
+  prod-east-1            v1.31.2   <span class="grn">✓ clean</span>                   3214ms
+  prod-east-2            v1.31.2   <span class="red">✗ BLOCKER (1)</span>             4521ms
+  staging-3              v1.30.4   <span class="yel">⚠ HIGH (2)</span>                2876ms
+
+<span style="font-weight:bold">Top issues across the fleet:</span>
+   18 cluster(s)  BLOCKER: policy/v1beta1/PodDisruptionBudget removed in v1.25
+                  prod-east-1, prod-east-2, prod-west-1, ...
+   12 cluster(s)  HIGH: [v1.31] cgroup v1 deprecated in kubelet
+
+<span class="mag">→ Next: Outlier clusters detected. Run preflight on the laggards.</span></div>
 
 <!-- ============== run ============== -->
 <h2 id="cmd-run">run plan · run watch · run verify</h2>

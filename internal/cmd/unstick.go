@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/saiyam1814/upgrade/internal/finding"
+	"github.com/saiyam1814/upgrade/internal/recommend"
 	"github.com/saiyam1814/upgrade/internal/report"
 	"github.com/saiyam1814/upgrade/internal/sources/live"
 	"github.com/saiyam1814/upgrade/internal/ui"
@@ -94,6 +95,8 @@ func runUnstick(ctx context.Context, o *unstickOpts) error {
 	if err := report.Render(os.Stdout, header, findings, format); err != nil {
 		return err
 	}
+
+	emitRecommendation(format, recommend.Context{Command: "unstick", Findings: findings})
 
 	if !o.autoFix {
 		return nil

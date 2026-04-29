@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/saiyam1814/upgrade/internal/finding"
+	"github.com/saiyam1814/upgrade/internal/recommend"
 	"github.com/saiyam1814/upgrade/internal/report"
 	"github.com/saiyam1814/upgrade/internal/rules/apis"
 	"github.com/saiyam1814/upgrade/internal/sources/live"
@@ -150,6 +151,11 @@ func runScan(ctx context.Context, o *scanOpts) error {
 		fmt.Fprintf(os.Stderr, "warning: %v\n", e)
 	}
 
+	emitRecommendation(format, recommend.Context{
+		Command:  "scan",
+		Target:   target.String(),
+		Findings: findings,
+	})
 	return failOnExit(findings, o.failOn)
 }
 

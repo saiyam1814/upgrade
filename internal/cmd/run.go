@@ -10,6 +10,8 @@ import (
 
 	"github.com/saiyam1814/upgrade/internal/cloud"
 	"github.com/saiyam1814/upgrade/internal/finding"
+	"github.com/saiyam1814/upgrade/internal/recommend"
+	"github.com/saiyam1814/upgrade/internal/report"
 	"github.com/saiyam1814/upgrade/internal/rules/apis"
 	"github.com/saiyam1814/upgrade/internal/sources/live"
 	"github.com/saiyam1814/upgrade/internal/ui"
@@ -148,6 +150,12 @@ func runRunPlan(ctx context.Context, o *runPlanOpts) error {
 
 	ui.Hr(os.Stdout)
 	fmt.Println(ui.Dim("Reminder: kubectl-upgrade NEVER runs the cloud CLI itself. You execute each step."))
+
+	emitRecommendation(report.FormatHuman, recommend.Context{
+		Command:  "run plan",
+		Target:   target.String(),
+		Provider: string(cluster.Provider),
+	})
 	return nil
 }
 
@@ -242,6 +250,7 @@ func runRunWatch(ctx context.Context, o *runWatchOpts) error {
 		}
 	}
 	ui.Warn(os.Stdout, "stop-after deadline reached")
+	emitRecommendation(report.FormatHuman, recommend.Context{Command: "run watch"})
 	return nil
 }
 
@@ -347,5 +356,10 @@ func runRunVerify(ctx context.Context, o *runVerifyOpts) error {
 		}
 	}
 
+	emitRecommendation(report.FormatHuman, recommend.Context{
+		Command:  "run verify",
+		Target:   target.String(),
+		Findings: findings,
+	})
 	return failOnExit(findings, o.failOn)
 }
