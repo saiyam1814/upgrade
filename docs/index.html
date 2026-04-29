@@ -329,19 +329,22 @@ MEDIUM
   <p class="lead">Pick whichever fits. All paths give you the same single static binary.</p>
 
   <div class="tabs">
-    <button class="tab active" data-tab="krew">krew</button>
-    <button class="tab" data-tab="brew">Homebrew</button>
-    <button class="tab" data-tab="curl">curl</button>
+    <button class="tab active" data-tab="curl">curl</button>
     <button class="tab" data-tab="go">go install</button>
+    <button class="tab" data-tab="dl">direct download</button>
   </div>
-  <div class="panel active" id="krew"><pre><code>kubectl krew install upgrade
+  <div class="panel active" id="curl"><pre><code>curl -sSL https://raw.githubusercontent.com/saiyam1814/upgrade/main/install.sh | sh
 kubectl upgrade --help</code></pre></div>
-  <div class="panel" id="brew"><pre><code>brew install saiyam1814/tap/kubectl-upgrade
-kubectl upgrade --help</code></pre></div>
-  <div class="panel" id="curl"><pre><code>curl -sSL https://raw.githubusercontent.com/saiyam1814/upgrade/main/install.sh | sh
-kubectl-upgrade --help</code></pre></div>
   <div class="panel" id="go"><pre><code>go install github.com/saiyam1814/upgrade@latest
-# binary lands as $(go env GOBIN)/upgrade — rename to kubectl-upgrade for kubectl plugin invocation</code></pre></div>
+mv $(go env GOBIN)/upgrade $(go env GOBIN)/kubectl-upgrade</code></pre></div>
+  <div class="panel" id="dl"><pre><code># https://github.com/saiyam1814/upgrade/releases
+tar -xzf kubectl-upgrade_$(uname -s | tr A-Z a-z)_$(uname -m | sed 's/x86_64/amd64/').tar.gz
+sudo install kubectl-upgrade /usr/local/bin/</code></pre></div>
+  <p class="dim" style="margin-top:1rem;font-size:0.9rem">
+    Once <code>kubectl-upgrade</code> is on your <code>$PATH</code>, <code>kubectl upgrade</code> works automatically — kubectl auto-discovers <code>kubectl-*</code> binaries.
+    <br><br>
+    Coming soon: <code>kubectl krew install upgrade</code> (PR to krew-index pending) · <code>brew install saiyam1814/tap/kubectl-upgrade</code> (tap repo + GoReleaser stanza pending).
+  </p>
 </section>
 
 <section id="commands" class="container">

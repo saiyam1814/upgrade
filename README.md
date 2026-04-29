@@ -31,26 +31,25 @@ Every existing tool — `pluto`, `kubent`, `kubepug`, every cloud's "upgrade ins
 
 ## Install
 
-### krew (recommended)
-```bash
-kubectl krew install upgrade
-```
-
-### Homebrew
-```bash
-brew install saiyam1814/tap/kubectl-upgrade
-```
-
-### curl
+### curl (recommended)
+Downloads the latest release archive and drops `kubectl-upgrade` on your `$PATH`. Once it's there, `kubectl upgrade` works automatically — kubectl auto-discovers `kubectl-*` binaries; no krew required.
 ```bash
 curl -sSL https://raw.githubusercontent.com/saiyam1814/upgrade/main/install.sh | sh
+kubectl upgrade --help
 ```
 
 ### From source
 ```bash
 go install github.com/saiyam1814/upgrade@latest
-mv $(go env GOBIN)/upgrade $(go env GOBIN)/kubectl-upgrade  # if needed
+mv $(go env GOBIN)/upgrade $(go env GOBIN)/kubectl-upgrade
 ```
+
+### Direct download
+Grab a tarball/zip from [Releases](https://github.com/saiyam1814/upgrade/releases) and place `kubectl-upgrade` on `$PATH`.
+
+### Coming soon
+- **krew** — manifest at `.krew/upgrade.yaml` is ready; PR to `kubernetes-sigs/krew-index` not yet submitted.
+- **Homebrew** — formula scaffolded; needs the tap repo + token before re-enabling in GoReleaser.
 
 ## The day-1 production flow
 
