@@ -120,6 +120,16 @@ func detectByNamespaces(ctx context.Context, core kubernetes.Interface) Provider
 	case have["capi-system"], have["capa-system"], have["capz-system"], have["capg-system"], have["capv-system"]:
 		return ProviderCAPI
 	}
+	// Kubeadm: bare-metal / on-prem / kind / minikube — every cluster
+	// installed via `kubeadm init` ships a kube-system/kubeadm-config
+	// ConfigMap. This is the canonical kubeadm marker.
+	if _, err := core.CoreV1().ConfigMaps("kube-system").Get(ctx, "kubeadm-config", metav1.GetOptions{}); err == nil {
+		return ProviderKubeadm
+	}
+	// kops self-managed: drops a kops-controller Deployment in kube-system.
+	if _, err := core.AppsV1().Deployments("kube-system").Get(ctx, "kops-controller", metav1.GetOptions{}); err == nil {
+		return ProviderKubeadm // kops drives kubeadm under the hood; same runbook applies
+	}
 	return ProviderUnknown
 }
 
@@ -306,18 +316,50 @@ func (c *Cluster) Plan(target string) UpgradeCommands {
 	case ProviderKubeadm:
 		return UpgradeCommands{
 			Provider: c.Provider,
+			PreReqs: []string{
+				"# Confirm the target version is available in your package repo:",
+				"#   Debian/Ubuntu: apt-cache madison kubeadm | head",
+				"#   RHEL/Rocky:    dnf --showduplicates list kubeadm | tail",
+				"sudo kubeadm version",
+			},
 			ControlPlane: []string{
-				"# On first control-plane node:",
-				"sudo apt-get update && sudo apt-get install -y kubeadm=" + bareVersion(target) + ".0-*",
+				"# Pick the path that matches how this cluster was installed:",
+				"",
+				"# ── Path A: Kubespray (Ansible) — the recommended flow if your cluster came from Kubespray",
+				"# From your Kubespray checkout:",
+				"ansible-playbook -i inventory/mycluster/hosts.yaml -b -v upgrade-cluster.yml -e kube_version=" + target,
+				"# Bumps control plane and workers, drains/uncordons, runs kubeadm under the hood.",
+				"",
+				"# ── Path B: Other Ansible-driven distros (e.g. RKE-style playbooks) — run your own playbook:",
+				"# ansible-playbook upgrade.yml -e k8s_version=" + target,
+				"",
+				"# ── Path C: Direct kubeadm (vanilla bare-metal, no Ansible)",
+				"# 1. FIRST control-plane node — install kubeadm at " + target + ":",
+				"#    Debian/Ubuntu: sudo apt-mark unhold kubeadm && sudo apt-get update && sudo apt-get install -y kubeadm=" + bareVersion(target) + ".x-*",
+				"#    RHEL/Rocky:    sudo dnf install -y kubeadm-" + bareVersion(target) + ".x --disableexcludes=kubernetes",
 				"sudo kubeadm upgrade plan",
 				"sudo kubeadm upgrade apply " + target,
-				"# On other control-plane nodes:",
+				"",
+				"# 2. OTHER control-plane nodes (install kubeadm at " + target + " first, same as above):",
 				"sudo kubeadm upgrade node",
-				"# Then on every worker node:",
-				"sudo kubectl drain <node> --ignore-daemonsets",
-				"sudo apt-get install -y kubelet=" + bareVersion(target) + ".0-* kubectl=" + bareVersion(target) + ".0-*",
-				"sudo systemctl restart kubelet",
-				"sudo kubectl uncordon <node>",
+				"",
+				"# 3. On EVERY node (control-plane + worker), refresh kubelet + kubectl, then restart:",
+				"sudo systemctl daemon-reload && sudo systemctl restart kubelet",
+			},
+			NodePools: []string{
+				"# Skip this whole section if you used Path A (Kubespray) — the playbook drains and bumps each worker for you.",
+				"",
+				"# For Path C (direct kubeadm), one worker at a time:",
+				"kubectl drain <node> --ignore-daemonsets --delete-emptydir-data",
+				"# (install kubelet+kubectl=" + bareVersion(target) + ".x via apt/dnf on the node)",
+				"sudo systemctl daemon-reload && sudo systemctl restart kubelet",
+				"kubectl uncordon <node>",
+			},
+			Notes: []string{
+				"Detected via kube-system/kubeadm-config ConfigMap. Kubespray, vanilla kubeadm, kops, kind, minikube, and most on-prem installers all produce this artifact.",
+				"Skew policy: kubelet may be ≤ N-3 minors behind apiserver from K8s 1.28+.",
+				"For HA control planes, run kubeadm sequentially on each CP node — the ConfigMap is updated by the FIRST 'upgrade apply'; subsequent nodes use 'upgrade node'.",
+				"Kubespray ref: https://github.com/kubernetes-sigs/kubespray/blob/master/docs/upgrades/upgrades.md",
 			},
 		}
 	case ProviderVCluster:
@@ -329,10 +371,42 @@ func (c *Cluster) Plan(target string) UpgradeCommands {
 		}
 	}
 
+	// Truly unknown: emit a generic kubeadm-flavoured runbook with a clear
+	// caveat. Most bare-metal "unknowns" turn out to be kubeadm under the
+	// hood, but we couldn't find the kubeadm-config ConfigMap (RBAC denial,
+	// custom installer that wiped it, very old cluster).
 	return UpgradeCommands{
 		Provider: c.Provider,
+		PreReqs: []string{
+			"# Provider auto-detection inconclusive. Trying generic kubeadm-style commands.",
+			"# If your cluster wasn't installed by kubeadm, consult your distro docs instead.",
+			"sudo kubeadm version 2>/dev/null || echo '!! kubeadm not on this host — skip kubeadm path'",
+			"kops version 2>/dev/null      || echo '!! kops not on this host — skip kops path'",
+		},
+		ControlPlane: []string{
+			"# OPTION A: kubeadm-managed cluster",
+			"sudo kubeadm upgrade plan",
+			"sudo kubeadm upgrade apply " + target,
+			"",
+			"# OPTION B: kops-managed cluster",
+			"kops edit cluster   # bump kubernetesVersion to " + target,
+			"kops update cluster --yes",
+			"kops rolling-update cluster --yes",
+			"",
+			"# OPTION C: custom installer / Ansible / Terraform",
+			"# Bump the version variable in your installer, re-run apply, then:",
+			"# kubectl drain each node, install new kubelet+kubectl, restart kubelet, uncordon.",
+		},
+		NodePools: []string{
+			"# After the control plane is upgraded, one node at a time:",
+			"kubectl drain <node> --ignore-daemonsets --delete-emptydir-data",
+			"# install kubelet+kubectl=" + bareVersion(target) + " via your OS package manager",
+			"sudo systemctl daemon-reload && sudo systemctl restart kubelet",
+			"kubectl uncordon <node>",
+		},
 		Notes: []string{
-			"Provider not auto-detected. Use `kubectl upgrade preflight` for pre-flight; the actual control-plane bump is up to your distro.",
+			"Couldn't auto-detect a known provider (no cloud-suffix in gitVersion, no kubeadm-config ConfigMap, no kops-controller, no Rancher / OpenShift / CAPI namespaces).",
+			"If you know the provider, the runbook above only suggests the most-common shapes. Adjust to match your setup.",
 		},
 	}
 }
