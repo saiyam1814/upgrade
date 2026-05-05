@@ -122,6 +122,15 @@ func NextStep(c Context) string {
 
 	case "report":
 		return "Share this report in the PR / change-window ticket. Next step depends on findings — see the per-section recommendations."
+
+	case "crds":
+		if blockers > 0 {
+			return crdBlockerHint(c.Findings)
+		}
+		if highs > 0 {
+			return "Resolve the CRD-side risks (deprecated versions in use, webhook cert expiry, orphan CRDs) before the upgrade window opens."
+		}
+		return "CRDs look healthy. Re-run as part of preflight: kubectl upgrade preflight --target " + defaultTarget(c.Target)
 	}
 	return ""
 }
@@ -146,6 +155,20 @@ func preflightBlockerHint(fs []finding.Finding) string {
 		}
 	}
 	return "Fix BLOCKERs before proceeding. Run kubectl upgrade unstick to inspect cluster-side issues."
+}
+
+// crdBlockerHint specializes by the first BLOCKER's category so the
+// hint reads like "fix this exact thing" rather than "fix CRDs."
+func crdBlockerHint(fs []finding.Finding) string {
+	for _, f := range fs {
+		if f.Severity != finding.Blocker {
+			continue
+		}
+		if f.Category == finding.CategoryWebhook {
+			return "Conversion webhook cert expired (or expires within 7 days). Force a cert rotation NOW — every CR op is, or is about to be, 503'ing. cert-manager users: bounce the issuing Certificate."
+		}
+	}
+	return "CRD BLOCKER detected. Resolve before upgrading — these issues do not get better on their own."
 }
 
 func driftHint(fs []finding.Finding) string {

@@ -72,6 +72,11 @@ func Connect(kubeconfigPath, contextName string) (*Client, error) {
 	return &Client{Discovery: disco, Dyn: dyn, Core: core, cfg: cfg}, nil
 }
 
+// RESTConfig exposes the underlying *rest.Config so callers that need
+// a typed client for an API group not pre-baked into Client (e.g.
+// apiextensions/v1) can build one without re-loading kubeconfig.
+func (c *Client) RESTConfig() *rest.Config { return c.cfg }
+
 // ServerVersion returns the apiserver's reported semver string.
 func (c *Client) ServerVersion() (string, error) {
 	v, err := c.Discovery.ServerVersion()

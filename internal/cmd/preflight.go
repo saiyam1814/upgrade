@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/saiyam1814/upgrade/internal/addons"
+	"github.com/saiyam1814/upgrade/internal/crds"
 	"github.com/saiyam1814/upgrade/internal/finding"
 	"github.com/saiyam1814/upgrade/internal/fleet"
 	"github.com/saiyam1814/upgrade/internal/pdb"
@@ -157,7 +158,14 @@ func runPreflight(ctx context.Context, o *preflightOpts) error {
 		ui.OK(os.Stdout, "volumes: PV/PVC/CSI checked")
 	}
 
-	// 6. vCluster (best-effort; ignore "no tenants" warning).
+	// 6. CRDs — deprecated versions in use, webhook cert expiry, orphan CRDs.
+	crdFs, crdErrs := crds.Analyze(ctx, client.RESTConfig(), client.Core, client.Dyn, crds.Options{})
+	all = append(all, crdFs...)
+	if format == report.FormatHuman {
+		ui.OK(os.Stdout, "crds: deprecation, webhook certs, orphans checked")
+	}
+
+	// 7. vCluster (best-effort; ignore "no tenants" warning).
 	if !o.skipVCluster {
 		vcFs, _ := vcluster.Analyze(ctx, client.Core, vcluster.Options{HostVersion: hostV})
 		all = append(all, vcFs...)
@@ -171,7 +179,7 @@ func runPreflight(ctx context.Context, o *preflightOpts) error {
 		ui.Hr(os.Stdout)
 	}
 
-	for _, e := range append(walkErrs, append(helmErrs, append(addonErrs, append(pdbErrs, volErrs...)...)...)...) {
+	for _, e := range append(walkErrs, append(helmErrs, append(addonErrs, append(pdbErrs, append(volErrs, crdErrs...)...)...)...)...) {
 		fmt.Fprintf(os.Stderr, "warning: %v\n", e)
 	}
 
@@ -238,6 +246,9 @@ func runPreflightFanout(ctx context.Context, o *preflightOpts, target apis.Semve
 		vf, ve := volumes.Analyze(jctx, c.Core, target)
 		all = append(all, vf...)
 		allErrs = append(allErrs, ve...)
+		cf, ce := crds.Analyze(jctx, c.RESTConfig(), c.Core, c.Dyn, crds.Options{})
+		all = append(all, cf...)
+		allErrs = append(allErrs, ce...)
 		if !o.skipVCluster {
 			vcf, _ := vcluster.Analyze(jctx, c.Core, vcluster.Options{HostVersion: hostV})
 			all = append(all, vcf...)
