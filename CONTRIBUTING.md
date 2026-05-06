@@ -1,6 +1,14 @@
 # Contributing
 
-Thanks for your interest. The fastest way to help is to extend the curated rule data — that's where the long tail of value is.
+Thanks for your interest. **Most needed:** see the [v0.2 / v0.3 roadmap issues](https://github.com/saiyam1814/upgrade/issues?q=label%3Aenhancement+is%3Aopen) — each is scoped to "~X LoC + Y unit tests" with clear acceptance criteria, ready to pull from.
+
+Easier first contributions:
+- **Add a new addon to the compat matrix** in `internal/addons/addons.go` (~5-10 lines per addon)
+- **Extend stuck-state detectors** in `internal/unstick/unstick.go`
+- **Document a real upgrade postmortem** as a `testdata/scenarios/*.md` so we know which checks to add next
+- **Fix a typo, polish a message** — `→ Next:` recommendations live in `internal/recommend/recommend.go`
+
+Anything bigger, comment on the relevant issue first so we can make sure the design fits.
 
 ## Rule data — where to add new entries
 

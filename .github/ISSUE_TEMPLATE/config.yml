@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 Quick question
+    url: https://github.com/saiyam1814/upgrade/discussions
+    about: Not sure if it's a bug? Use Discussions for "how do I...?"
+  - name: 📋 v0.2 enhancement requests
+    url: https://github.com/saiyam1814/upgrade/issues?q=label%3Aenhancement+is%3Aopen
+    about: See what's on the v0.2 roadmap, or pick one to work on

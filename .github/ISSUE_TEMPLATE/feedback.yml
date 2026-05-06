@@ -1,0 +1,67 @@
+name: 🧪 Feedback / report a bug
+description: Something didn't work? Surfaced a finding that wasn't real? Missed a finding that was? Tell us.
+title: "[feedback] "
+labels: ["feedback"]
+body:
+  - type: input
+    id: command
+    attributes:
+      label: Command you ran
+      description: The full command, including flags. Copy-paste from your terminal.
+      placeholder: kubectl upgrade preflight --target v1.34
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: kubectl-upgrade version
+      description: From `kubectl upgrade version`
+      placeholder: 0.1.3
+    validations:
+      required: true
+  - type: dropdown
+    id: cluster
+    attributes:
+      label: Cluster type
+      multiple: false
+      options:
+        - kubeadm / Kubespray (bare-metal)
+        - EKS
+        - GKE
+        - AKS
+        - OpenShift / ROSA
+        - RKE2 / k3s
+        - Talos
+        - kind / minikube
+        - vCluster Tenant Cluster
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you expect? What did you get instead?
+      placeholder: |
+        I expected `preflight` to flag the deprecated CronJob in my manifests.
+        It returned "✓ no upgrade-blocking issues found".
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Command output (paste between the ```)
+      description: Helpful when something looks wrong. Strip secrets first.
+      render: shell
+      value: |
+        $ kubectl upgrade preflight --target v1.34
+        ...
+  - type: checkboxes
+    id: tried
+    attributes:
+      label: Tell us what you tried
+      options:
+        - label: I ran on a real cluster
+        - label: I ran with `--format json` and the output looks the same
+        - label: I'm using the latest release
+        - label: I checked the existing issues first

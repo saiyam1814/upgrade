@@ -2,6 +2,8 @@
 
 > The missing pre-flight + watch + verify layer that wraps any Kubernetes upgrade.
 
+![demo](docs/screenshots/demo.gif)
+
 `kubectl-upgrade` tells you what will break before you start, generates the exact provider-specific upgrade commands for you to run, watches the upgrade in progress (catching stuck PDBs, stalled CRD migrations, addon dependency cycles), tells you how to unstick it, and verifies success after.
 
 It does not run cloud CLIs itself — it makes them safe to run.
